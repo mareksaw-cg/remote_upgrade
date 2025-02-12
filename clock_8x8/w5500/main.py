@@ -838,6 +838,7 @@ async def index(request, response):
             print('start')
             for data_chunk in download_in_chunks(_SRCURL):
                 f.write(data_chunk)
+                wdt.feed()
         await response.start_html()
         await response.send(_STRINGS[1] % ('downloaded...'))
         collect()
