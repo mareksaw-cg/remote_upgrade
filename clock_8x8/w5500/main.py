@@ -289,10 +289,10 @@ def reset_cat():
     r.close()
     return data
 
-def download_in_chunks(url, chunk_size=256):
+def download_in_chunks(url, chunk_size=512):
     global result_str, proceed
     try:
-        response = urequests.get(url, stream=True, timeout=4)
+        response = urequestsget(url, stream=True, timeout=4)
         proceed = True
     except:
         result_str = 'GET ERROR'
@@ -837,31 +837,23 @@ async def index(request, response):
         with open("_main.py", "wb") as f:
             print('start')
             for data_chunk in download_in_chunks(_SRCURL):
+                if data_chunk.startswith(_CTRL_STR1): init_str = True    
                 f.write(data_chunk)
                 wdt.feed()
         await response.start_html()
         await response.send(_STRINGS[1] % ('downloaded...'))
         collect()
-        if result_str == 'OK':
-            with open("_main.py", "rb") as f:
-                if f.readline()[:10] == b'#--version': init_str = True
-                f.seek(0, 2)
-                file_size = f.tell()
-                start_pos = file_size - 9
-                if start_pos < 0: start_pos = 0  # In case the file is shorter than 10 bytes
-                f.seek(start_pos, 0)
-                if f.read(8) == b'#--$FE--': end_str = True
+        print('downloaded')
+        end_str = True
                 
         if init_str and end_str:
-            if init_str and end_str: rename('_main.py', 'main_.py')
+            if init_str and end_str: rename('_main.py', 'main.py')
             result_str = 'OK RENAME'
         
         await response.start_html()
         await response.send(_STRINGS[1] % result_str)
-
     else:
-        await response.send(_STRINGS[1] % 'WRONG PASS')
-        
+        await response.send(_STRINGS[1] % 'WRONG PASS')        
     tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 
 lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
