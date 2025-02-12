@@ -3,7 +3,7 @@
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
     f = open('main.py', 'r')
-    line1 = f.readlines()[0].split('--')[1][7:]
+    line1 = f.readline().split('--')[1][7:]
     f.close()
 except:
     line1 = 'error'
@@ -46,7 +46,8 @@ _STRINGS = const(("""<!DOCTYPE html>
 """))
 
 _PASSWD = const('zp987-')
-_SRCURL = const('https://onedrive.live.com/download?resid=7A40866E01A106BA%21137386&authkey=!AKX-JpKATav5IZ8')
+#_SRCURL = const('https://onedrive.live.com/download?resid=7A40866E01A106BA%21137386&authkey=!AKX-JpKATav5IZ8')
+_SRCURL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/clock_8x8/w5500/main.py')
 
 from machine import I2C, Pin
 from gc import collect, mem_free
