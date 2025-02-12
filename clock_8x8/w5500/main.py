@@ -857,4 +857,4 @@ else:
     fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    no network after boot\n', 'a')
     machine.reset()
 #'<tr><td><a href="tvlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('CHD', str(ch_en)), 
-#--endoffile--
+#--$FE--
