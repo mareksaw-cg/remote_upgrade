@@ -1,4 +1,4 @@
-#--version0.994.5_120225--
+#--version0.995.5_120225--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
@@ -628,7 +628,7 @@ async def index(request, response):
     await response.send(html1 % buthtml % 'tvlock1')
     
 @app.route('/tvlock1')
-# ustawia blokadÄ™ zaÅ‚Ä…czenia chromecasta
+# ustawia blokade zalaczenia chromecasta
 async def index(request, response):
     global ch_en
     await response.start_html()
@@ -849,6 +849,7 @@ async def index(request, response):
         if init_str and end_str:
             if init_str and end_str: rename('_main.py', 'main.py')
             result_str = 'OK RENAME'
+            fileop('main.err', wr_error('NEW FIRMWARE\n'), 'a')
         
         await response.start_html()
         await response.send(_STRINGS[1] % result_str)
