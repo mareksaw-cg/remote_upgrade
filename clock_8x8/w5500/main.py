@@ -293,10 +293,7 @@ def get_pins():
 def switch_solar():
     global pws
     pws = not pws
-    if pws:
-        sstr = '/solar1'
-    else:
-        sstr = '/mains1'
+    sstr = '/solar1' if pws else '/mains1'
     r = urequestsget("http://10.0.0.8:8099" + sstr, timeout=2)
     data = r.content
     r.close()
