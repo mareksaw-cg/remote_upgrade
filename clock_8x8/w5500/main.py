@@ -774,57 +774,7 @@ async def index(request, response):
 async def index(request, response):
     await response.start_html()
     await response.send(_STRINGS[1] % _STRINGS[5])
-'''  
-@app.route('/upgrade')
-async def index(request, response):
-    tim.deinit()
-    tim2 = Timer()
-    tim2.init(freq=0.4, mode=Timer.PERIODIC, callback=tickwdt)
-    collect()
-    await response.start_html()
-    rtnmsg = 'OK'
-    qs1 = request.query_string.decode('utf-8').split('=')[1]
-    if qs1 == _PASSWD:
-        await response.send(_STRINGS[1] % 'downloading...')
-        try:
-            res = urequestsget(_SRCURL).text
-            getok = True
-        except:
-            getok = False
-        if getok:
-            chk1 = checksum(res)
-            await response.start_html()
-            await response.send(_STRINGS[1] % ('downloaded... chksum=' + str(chk1)))
-            rename('main.py', 'main_.py')
-            if res.endswith('#--endoffile--'):
-                f = open('main.py', 'w')
-                f.write(res)
-                f.close()
-                print('write ok')
-                await response.start_html()
-                await response.send(_STRINGS[1] % 'write ok')
-                sleep(0.2)
-                f = open('main.py')
-                fr = f.read()
-                f.close()
-                if chk1 == checksum(fr):
-                    await response.start_html()
-                    await response.send(_STRINGS[1] % 'check ok')
-                else:
-                    remove('main.py')
-                    rename('main_.py', 'main.py')
-                    rtnmsg = 'file not updated'
-            else:
-                rtnmsg = 'Download error'
-        else:
-            rtnmsg = 'Download error'            
-        await response.start_html()
-        await response.send(_STRINGS[1] % rtnmsg)
-    else:
-        await response.send(_STRINGS[1] % 'WRONG PASS')
-    tim2.deinit()
-    tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
-'''
+
 @app.route('/upgrade')
 async def index(request, response):
     tim.deinit()
