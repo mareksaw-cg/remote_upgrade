@@ -175,8 +175,6 @@ volt2 = 0
 amp2 = 0
 qs = '0;0'
 
-counter = int(0)
-chunk_count = int(0)
 init_str = False
 end_str = False
 result_str = 'GENERAL ERROR'
@@ -288,14 +286,10 @@ def reset_cat():
     r.close()
     return data
 
-def download_in_chunks(url, chunk_size=512):
-    global chunk_count, result_str, proceed
-    """
-    Download the content from the given URL in chunks.
-    Yields each chunk as bytes.
-    """
+def download_in_chunks(url, chunk_size=256):
+    global result_str, proceed
     try:
-        response = urequests.get(url, stream=True, timeout=3)
+        response = urequests.get(url, stream=True, timeout=4)
         proceed = True
     except:
         result_str = 'GET ERROR'
@@ -305,7 +299,6 @@ def download_in_chunks(url, chunk_size=512):
             while True:
                 try:
                     chunk = response.raw.read(chunk_size)
-                    chunk_count += 1
                 except:
                     response.close()
                     proceed = False
