@@ -212,45 +212,7 @@ def checksum(msg):
     v = 21
     for c in msg: v ^= ord(c)
     return v
-'''
-def connect():
-    global wifi
-    wtext = 'WLAN'
-    if not wlan.active(): wlan.active(True)
-#    if not lan:
-#        if not wlan.isconnected(): wlan.connect('Wiatrak-holender1', 'klumpioky03')
-    for n in range(6):
-        if wlan.isconnected():
-            print('ifconf:', wlan.ifconfig())
-            wifi = True
-            if lcd:
-                lcddisplay.text('WLAN OK', 64, 0, 1)
-                lcddisplay.text('IP: ' + wlan.ifconfig()[0], 0, 20, 1)
-                lcddisplay.show()
-            break
-        print('connecting...')
-        if lcd:
-            lcddisplay.text(wtext, 64, 0, 1)
-            lcddisplay.show()
-            wtext += '.'
-        sleep(3)
-    else:
-        wifi = False
-        print('no network!')
-        
-if not lan:
-    def ch_conn(timer):
-        print('ch_conn')
-        if not wlan.isconnected():
-            if not wlan.active(): wlan.active(True)
-            if wifi and not lan:
-                wlan.connect('Wiatrak-holender1', 'klumpioky03')
-                print('Ponowne laczenie!')
-            else:
-                connect()
-        else:
-            print('WLAN OK!')
-'''
+
 def getntp1():
     print('getntp')
     global ntpok
