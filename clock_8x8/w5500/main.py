@@ -1,4 +1,4 @@
-#--version0.994.5_110225--
+#--version0.994.5_120225--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
@@ -247,6 +247,9 @@ def wr_backup():
 def fileop(path, content, action):
     with open(path, action) as f:
         f.write(content)
+        
+def wr_error(msg):
+    return str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    ' + msg
     
 def get_pins():
     print('pins')
@@ -379,7 +382,7 @@ def tick(timer):
             sleep(1)
             app.run(host='0.0.0.0', port=1411)
         if rstcount > 19:
-            fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    server not responding\n', 'a')
+            fileop('main.err', wr_error('server not responding\n'), 'a')
             machine.reset()
         
         if not mm % 15:
@@ -388,18 +391,18 @@ def tick(timer):
             if modovr:
                 if not ping('8.8.8.8', count=1, timeout=400, quiet=True)[1]:
                     reset_cat()
-                    fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    CAT RESET NO PING AND MODOVR\n', 'a')
+                    fileop('main.err', wr_error('CAT RESET NO PING AND MODOVR\n'), 'a')
             
         if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
             reset_cat()
-            fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    ROUTER RELAY ERROR', 'a')
+            fileop('main.err', wr_error('ROUTER RELAY ERROR'), 'a')
             
         if amp == 0 and amp2 == 0:
             curcount += 1
         else:
             curcount = 0
         if curcount > 5:
-            fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    INA reading zeros\n', 'a')
+            fileop('main.err', wr_error('INA reading zeros\n'), 'a')
             machine.reset()
 
     if ss == 5:
@@ -654,7 +657,7 @@ async def index(request, response):
     await response.start_html()
     await response.send(_STRINGS[1] % 'OK RESET')
     sleep(1)
-    fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    RESET via web\n', 'a')
+    fileop('main.err', wr_error('RESET via web\n'), 'a')
     machine.reset()
 
 @app.route('/nlock1')
@@ -771,7 +774,7 @@ async def index(request, response):
 async def index(request, response):
     await response.start_html()
     await response.send(_STRINGS[1] % _STRINGS[5])
-  
+'''  
 @app.route('/upgrade')
 async def index(request, response):
     tim.deinit()
@@ -821,6 +824,44 @@ async def index(request, response):
         await response.send(_STRINGS[1] % 'WRONG PASS')
     tim2.deinit()
     tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
+'''
+
+@app.route('/upgrade')
+async def index(request, response):
+    tim.deinit()
+    collect()
+    await response.start_html()
+    qs1 = request.query_string.decode('utf-8').split('=')[1]
+    if qs1 == _PASSWD:
+        await response.send(_STRINGS[1] % 'downloading...')
+        with open("_main.py", "wb") as f:
+            print('start')
+            for data_chunk in download_in_chunks(_SRCURL):
+                f.write(data_chunk)
+        await response.start_html()
+        await response.send(_STRINGS[1] % ('downloaded...'))
+        collect()
+        if result_str == 'OK':
+            with open("_main.py", "rb") as f:
+                if f.readline()[:10] == b'#--version': init_str = True
+                f.seek(0, 2)
+                file_size = f.tell()
+                start_pos = file_size - 9
+                if start_pos < 0: start_pos = 0  # In case the file is shorter than 10 bytes
+                f.seek(start_pos, 0)
+                if f.read(8) == b'#--$FE--': end_str = True
+                
+        if init_str and end_str:
+            if init_str and end_str: rename('_main.py', 'main_.py')
+            result_str = 'OK RENAME'
+        
+        await response.start_html()
+        await response.send(_STRINGS[1] % result_str)
+
+    else:
+        await response.send(_STRINGS[1] % 'WRONG PASS')
+        
+    tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 
 lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
 rping = ping('10.0.0.95', count=1, timeout=300, quiet=True)[1]
@@ -828,12 +869,12 @@ p13 = ping('10.0.0.13', count=1, timeout=300, quiet=True)[1]
 
 if wdten: wdt = WDT(timeout=8001)
 
-fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    START\n', 'a')
+fileop('main.err', wr_error('START\n'), 'a')
 
 try:
     send_signal('W5500 RESTART')
 except:
-    fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    SIGNAL send error\n', 'a')
+    fileop('main.err', wr_error('SIGNAL send error\n'), 'a')
 
 tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 '''
@@ -847,7 +888,7 @@ if wifi:
 else:
     print('Serwer zatrzymany')
     sleep(30)
-    fileop('main.err', str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    no network after boot\n', 'a')
+    fileop('main.err', wr_error('no network after boot\n'), 'a')
     machine.reset()
 #'<tr><td><a href="tvlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('CHD', str(ch_en)), 
 #--$FE--
