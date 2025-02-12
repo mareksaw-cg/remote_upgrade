@@ -48,6 +48,8 @@ _STRINGS = const(("""<!DOCTYPE html>
 _PASSWD = const('zp987-')
 #_SRCURL = const('https://onedrive.live.com/download?resid=7A40866E01A106BA%21137386&authkey=!AKX-JpKATav5IZ8')
 _SRCURL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/clock_8x8/w5500/main.py')
+_CTRL_STR1 = const('#--version')
+ctrl_str2 = (chr(36) + chr(70) + chr(69) + chr(45) + chr(45)).encode()
 
 from machine import I2C, Pin
 from gc import collect, mem_free
@@ -172,6 +174,13 @@ amp = 0
 volt2 = 0
 amp2 = 0
 qs = '0;0'
+
+counter = int(0)
+chunk_count = int(0)
+init_str = False
+end_str = False
+result_str = 'GENERAL ERROR'
+proceed = False
 
 f = open('backup.dat')
 enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0 = [int(i) for i in f.read().split(';')]
@@ -316,6 +325,38 @@ def reset_cat():
     data = r.content
     r.close()
     return data
+
+def download_in_chunks(url, chunk_size=512):
+    global chunk_count, result_str, proceed
+    """
+    Download the content from the given URL in chunks.
+    Yields each chunk as bytes.
+    """
+    try:
+        response = urequests.get(url, stream=True, timeout=3)
+        proceed = True
+    except:
+        result_str = 'GET ERROR'
+        proceed = False
+    if proceed:
+        try:
+            while True:
+                try:
+                    chunk = response.raw.read(chunk_size)
+                    chunk_count += 1
+                except:
+                    response.close()
+                    proceed = False
+                    result_str = 'RESPONSE ERROR'
+                    break
+                #print(chunk)
+                if not chunk:  # No more data
+                    result_str = 'OK'
+                    response.close()
+                    break
+                yield chunk
+        finally:
+            response.close()
 
 def tick(timer):
 
