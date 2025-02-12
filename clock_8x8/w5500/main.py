@@ -825,7 +825,6 @@ async def index(request, response):
     tim2.deinit()
     tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 '''
-
 @app.route('/upgrade')
 async def index(request, response):
     tim.deinit()
