@@ -1,4 +1,4 @@
-#--version0.995.5_130225--
+#--version0.996.5_130225--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
@@ -807,7 +807,7 @@ async def index(request, response):
                 f.write(data_chunk)
                 f_size += len(data_chunk)
                 wdt.feed()
-        if result_str = 'OK':
+        if result_str == 'OK':
             await response.start_html()
             await response.send(_STRINGS[1] % ('OK DOWNLOADED,SIZE=' + str(f_size)))
             print('downloaded')
@@ -817,7 +817,7 @@ async def index(request, response):
         wdt.feed()
                
         if init_str and end_str:
-            if init_str and end_str: rename('_main.py', 'main.py')
+            rename('_main.py', 'main.py')
             result_str = 'OK RENAME'
             fileop('main.err', wr_error('NEW FIRMWARE\n'), 'a')
         
