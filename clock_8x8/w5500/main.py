@@ -1,4 +1,4 @@
-#--version0.995.5_120225--
+#--version0.995.5_130225--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
@@ -54,7 +54,7 @@ _PASSWD = const('zp987-')
 #_SRCURL = const('https://onedrive.live.com/download?resid=7A40866E01A106BA%21137386&authkey=!AKX-JpKATav5IZ8')
 _SRCURL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/clock_8x8/w5500/main.py')
 _CTRL_STR1 = const('#--version')
-ctrl_str2 = (chr(36) + chr(70) + chr(69) + chr(45) + chr(45)).encode()
+#ctrl_str2 = (chr(36) + chr(70) + chr(69) + chr(45) + chr(45)).encode()
 
 from machine import I2C, Pin
 from gc import collect, mem_free
@@ -276,10 +276,10 @@ def switch_solar():
     r.close()
     if 'SOLAR' in data: pws = True
     if 'MAINS' in data: pws = False
-    
+'''    
 def tickwdt(timer):
     wdt.feed()
-    
+'''    
 def send_signal(msg):
     r = urequestsget("http://10.0.0.13:8041/signal?msg=" + msg.replace(' ', '+'), timeout=3)
     sleep(0.1)
@@ -295,7 +295,7 @@ def reset_cat():
     return data
 
 def download_in_chunks(url, chunk_size=512):
-    global result_str, proceed
+    global result_str
     try:
         response = urequestsget(url, stream=True, timeout=4)
         proceed = True
@@ -795,6 +795,7 @@ async def index(request, response):
 async def index(request, response):
     tim.deinit()
     collect()
+    f_size = int(0)
     await response.start_html()
     qs1 = request.query_string.decode('utf-8').split('=')[1]
     if qs1 == _PASSWD:
@@ -804,13 +805,17 @@ async def index(request, response):
             for data_chunk in download_in_chunks(_SRCURL):
                 if data_chunk.startswith(_CTRL_STR1): init_str = True    
                 f.write(data_chunk)
+                f_size += len(data_chunk)
                 wdt.feed()
-        await response.start_html()
-        await response.send(_STRINGS[1] % ('downloaded...'))
+        if result_str = 'OK':
+            await response.start_html()
+            await response.send(_STRINGS[1] % ('OK DOWNLOADED,SIZE=' + str(f_size)))
+            print('downloaded')
+            end_str = True
+            
         collect()
-        print('downloaded')
-        end_str = True
-                
+        wdt.feed()
+               
         if init_str and end_str:
             if init_str and end_str: rename('_main.py', 'main.py')
             result_str = 'OK RENAME'
