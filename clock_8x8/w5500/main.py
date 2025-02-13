@@ -1,4 +1,4 @@
-#--version0.996.5_130225--
+#--version0.995.5_130225--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
@@ -795,7 +795,6 @@ async def index(request, response):
 async def index(request, response):
     tim.deinit()
     collect()
-    f_size = int(0)
     await response.start_html()
     qs1 = request.query_string.decode('utf-8').split('=')[1]
     if qs1 == _PASSWD:
@@ -805,11 +804,11 @@ async def index(request, response):
             for data_chunk in download_in_chunks(_SRCURL):
                 if data_chunk.startswith(_CTRL_STR1): init_str = True    
                 f.write(data_chunk)
-                f_size += len(data_chunk)
                 wdt.feed()
+        print('chunk completed')
         if result_str == 'OK':
             await response.start_html()
-            await response.send(_STRINGS[1] % ('OK DOWNLOADED,SIZE=' + str(f_size)))
+            await response.send(_STRINGS[1] % ('OK DOWNLOADED'))
             print('downloaded')
             end_str = True
             
