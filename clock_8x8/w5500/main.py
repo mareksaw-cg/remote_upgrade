@@ -295,7 +295,7 @@ def reset_cat():
     return data
 
 def download_in_chunks(url, chunk_size=512):
-    global result_str
+    global result_str, proceed
     try:
         response = urequestsget(url, stream=True, timeout=4)
         proceed = True
@@ -805,16 +805,12 @@ async def index(request, response):
                 if data_chunk.startswith(_CTRL_STR1): init_str = True    
                 f.write(data_chunk)
                 wdt.feed()
-        print('chunk completed')
-        if result_str == 'OK':
-            await response.start_html()
-            await response.send(_STRINGS[1] % ('OK DOWNLOADED'))
-            print('downloaded')
-            end_str = True
-            
+        await response.start_html()
+        await response.send(_STRINGS[1] % ('downloaded...'))
         collect()
-        wdt.feed()
-               
+        print('downloaded')
+        end_str = True
+                
         if init_str and end_str:
             rename('_main.py', 'main.py')
             result_str = 'OK RENAME'
