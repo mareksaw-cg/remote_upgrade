@@ -1,4 +1,4 @@
-#--version0.959_210225--    
+#--version0.960_220225--    
 from machine import Pin
 
 roupin = Pin(17, Pin.OUT)
@@ -359,8 +359,10 @@ def tick(timer):
             glk = str(data[4])
             nlk = str(data[5])
             chp = float(data[6])
+            rouovr = str(data[7])
             glk1 = True if glk == 'True' else False
             nlk1 = True if nlk == 'True' else False
+            rouovr1 = True if rouovr == 'True' else False
             print(svolt, samp, bvolt, bamp, modovr1, rouovr1, glk1, nlk1, chp)
             servok = True
             nokcount = 4
@@ -524,7 +526,7 @@ app = webserver()
 @app.route('/')
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
+    await response.send(html1 % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
 
 @app.route('/params')
 async def index(request, response):
