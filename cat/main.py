@@ -1,4 +1,4 @@
-#--version0.958_090225--    
+#--version0.959_220225--    
 from machine import Pin
 
 roupin = Pin(17, Pin.OUT)
@@ -97,8 +97,10 @@ nokcount = int(4)
 #npval = 10
 ucc = int(0)
 
-#passwd = const('zp987-')
+_PASSWD = const('zp987-')
 #url = const('https://onedrive.live.com/download?cid=7A40866E01A106BA&resid=7A40866E01A106BA%21137441&authkey=AN0DlSOfEB27VcE')
+_URL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/cat/main.py')
+_CTRL_STR1 = const('#--version')
 
 modem = bool(0)
 router = bool(0)
@@ -109,6 +111,8 @@ bamp = 0
 frapow = 0
 avcur = 0
 chp = 0
+lrst = 'RESTART'
+result_str = 'GENERAL ERROR'
 
 collect()
 '''
@@ -138,6 +142,33 @@ def p21_int(Pin):
     sleep(0.3)
     p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 '''
+def download_in_chunks(url, chunk_size=512):
+    global result_str, proceed
+    try:
+        response = get(url, stream=True, timeout=4)
+        proceed = True
+    except:
+        result_str = 'GET ERROR'
+        proceed = False
+    if proceed:
+        try:
+            while True:
+                try:
+                    chunk = response.raw.read(chunk_size)
+                except:
+                    response.close()
+                    proceed = False
+                    result_str = 'RESPONSE ERROR'
+                    break
+                #print(chunk)
+                if not chunk:  # No more data
+                    result_str = 'OK'
+                    response.close()
+                    break
+                yield chunk
+        finally:
+            response.close()
+
 def connect():
     global solarip, wifi
     if lcd: display.fill(0)
@@ -320,7 +351,7 @@ def tick(timer):
         data = get_solar1()
         if data != b'': data = data.split(b'\n')[3].decode('utf-8')[10:-7].split(';')
         
-        if getdata and data[7] == 'OK':
+        if getdata and data[len(data) - 1] == 'OK':
             svolt = float(data[0])
             samp = float(data[1])
             bvolt = float(data[2])
@@ -351,6 +382,7 @@ def tick(timer):
             elif bamp > refcur and router and not modem: router = 0
             
         else:
+            print('get error')
             nokcount -= 1
             ucc += 1
             if ucc > 65:
@@ -461,6 +493,8 @@ getntp()
 sleep(2)
 tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 tim1.init(freq=0.015, mode=Timer.PERIODIC, callback=ch_conn)
+(year, month, mday, wday, hour, minute, second, msecs) = rtc.datetime()
+lrst = str(mday) + '.' + str(month) + '.' + str(year) + ' ' +str(hour) + ':' +str(minute)
 #p20.irq(trigger=Pin.IRQ_FALLING, handler=p20_int)
 #p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 
@@ -490,7 +524,7 @@ app = webserver()
 @app.route('/')
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br><a href="resetconf">RESTART</a>'))
+    await response.send(html1 % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
 
 @app.route('/params')
 async def index(request, response):
@@ -571,7 +605,6 @@ async def index(request, response):
     await response.start_html()
     await response.send(html1 % 'OK')
 
-'''
 @app.route('/upgradeconf')
 async def index(request, response):
     await response.start_html()
@@ -579,54 +612,35 @@ async def index(request, response):
     
 @app.route('/upgrade')
 async def index(request, response):
+    tim.deinit()
+    tim1.deinit()
     collect()
     await response.start_html()
-    qs1 = request.query_string.decode('utf-8')
-    qs1 = qs1.split('=')[1]
-    if qs1:
-        if qs1 == passwd:
-            await response.send(html1 % 'downloading...')
-            try:
-                res = get(url).text
-                getok = True
-            except:
-                getok = False
-            if getok:
-                chk1 = checksum(res)
-                await response.start_html()
-                await response.send(html1 % ('downloaded... chksum=' + str(chk1)))
-                rename('main.py', 'main_.py')
-                if res.endswith('#--endoffile--'):
-                    f = open('main.py', 'w')
-                    f.write(res)
-                    f.close()
-                    print('write ok')
-                    await response.start_html()
-                    await response.send(html1 % 'write ok')
-                    sleep(0.2)
-                    f = open('main.py')
-                    fr = f.read()
-                    f.close()
-                    chk2 = checksum(fr)
-                    if chk1 == chk2:
-                        await response.start_html()
-                        await response.send(html1 % 'check ok')
-                    else:
-                        remove('main.py')
-                        rename('main_.py', 'main.py')
-                        await response.start_html()
-                        await response.send(html1 % 'file not updated')
-                else:
-                    await response.start_html()
-                    await response.send(html1 % 'file error')
-            else:
-                await response.start_html()
-                await response.send(html1 % 'download error')            
-            await response.start_html()
-            await response.send(html1 % 'OK')
-        else:
-            await response.send(html1 % 'WRONG PASS')
-'''
+    qs1 = request.query_string.decode('utf-8').split('=')[1]
+    if qs1 == _PASSWD:
+        await response.send(_STRINGS[1] % 'downloading...')
+        with open("_main.py", "wb") as f:
+            print('start')
+            for data_chunk in download_in_chunks(_URL):
+                if data_chunk.startswith(_CTRL_STR1): init_str = True    
+                f.write(data_chunk)
+        await response.start_html()
+        await response.send(_STRINGS[1] % ('downloaded...'))
+        collect()
+        print('downloaded')
+        end_str = True
+                
+        if init_str and end_str:
+            rename('_main.py', 'main.py')
+            result_str = 'OK RENAME'
+            #fileop('main.err', wr_error('NEW FIRMWARE\n'), 'a')
+        
+        await response.start_html()
+        await response.send(_STRINGS[1] % result_str)
+    else:
+        await response.send(_STRINGS[1] % 'WRONG PASS')        
+    tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
+    tim1.init(freq=0.015, mode=Timer.PERIODIC, callback=ch_conn)
 
 if wifi:
     app.run(host='0.0.0.0', port=1412)
@@ -637,4 +651,4 @@ else:
     f.write('1')
     f.close()
     machine.reset()
-#--endoffile--
+#--$FE--
