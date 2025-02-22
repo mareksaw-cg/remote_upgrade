@@ -1,4 +1,4 @@
-#--version0.959_220225--    
+#--version0.959_210225--    
 from machine import Pin
 
 roupin = Pin(17, Pin.OUT)
@@ -72,7 +72,7 @@ if lcd:
 
 import ntptimerp2 as ntptimem
 #from neopixel import NeoPixel
-#from os import rename, remove
+from os import rename, remove
 
 #np = NeoPixel(neopin, 1)
 
@@ -612,20 +612,22 @@ async def index(request, response):
     
 @app.route('/upgrade')
 async def index(request, response):
+    print('upgrade')
     tim.deinit()
     tim1.deinit()
     collect()
     await response.start_html()
     qs1 = request.query_string.decode('utf-8').split('=')[1]
     if qs1 == _PASSWD:
-        await response.send(_STRINGS[1] % 'downloading...')
+        print('passok')
+        await response.send(html1 % 'downloading...')
         with open("_main.py", "wb") as f:
             print('start')
             for data_chunk in download_in_chunks(_URL):
                 if data_chunk.startswith(_CTRL_STR1): init_str = True    
                 f.write(data_chunk)
         await response.start_html()
-        await response.send(_STRINGS[1] % ('downloaded...'))
+        await response.send(html1 % ('downloaded...'))
         collect()
         print('downloaded')
         end_str = True
@@ -636,9 +638,9 @@ async def index(request, response):
             #fileop('main.err', wr_error('NEW FIRMWARE\n'), 'a')
         
         await response.start_html()
-        await response.send(_STRINGS[1] % result_str)
+        await response.send(html1 % result_str)
     else:
-        await response.send(_STRINGS[1] % 'WRONG PASS')        
+        await response.send(html1 % 'WRONG PASS')        
     tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
     tim1.init(freq=0.015, mode=Timer.PERIODIC, callback=ch_conn)
 
