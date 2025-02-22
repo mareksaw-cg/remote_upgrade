@@ -1,4 +1,4 @@
-#--version0.995.5_130225--
+#--version0.996.5_220225--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 try:
@@ -748,7 +748,7 @@ async def index(request, response):
         partemp = qs.split(';')
         roupin = bool(int(partemp[2]))
         modpin = bool(int(partemp[3]))
-    pstring = str(volt) + ';' + str(amp) + ';' + str(volt2) + ';' + str(amp2) + ';' + str(glk) + ';' + str(nlk) + ';' + str(chp) + ';OK'
+    pstring = str(volt) + ';' + str(amp) + ';' + str(volt2) + ';' + str(amp2) + ';' + str(glk) + ';' + str(nlk) + ';' + str(chp) + ';' + str(rouovr) + ';OK'
     await response.start_html()
     await response.send(_STRINGS[1] % pstring)
     rstcount = 0
