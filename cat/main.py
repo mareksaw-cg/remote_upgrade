@@ -1,5 +1,10 @@
-#--version0.960_220225--    
+#--version0.961_230225--    
 from machine import Pin
+
+def fwrite(valstr):
+    f = open('rstate.dat', 'w')
+    f.write(valstr)
+    f.close()
 
 roupin = Pin(17, Pin.OUT)
 
@@ -10,9 +15,27 @@ f.close()
 if not rstate:
     roupin.value(1)
 else:
-    f = open('rstate.dat', 'w')
-    f.write('0')
-    f.close()    
+    fwrite('0')
+    
+_PASSWD = const('zp987-')
+#url = const('https://onedrive.live.com/download?cid=7A40866E01A106BA&resid=7A40866E01A106BA%21137441&authkey=AN0DlSOfEB27VcE')
+_URL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/cat/main.py')
+_CTRL_STR1 = const('#--version')
+
+_STRINGS = const(("""<!DOCTYPE html>
+<html>
+    <head></head>
+    <body>%s</body>
+</html>
+""","""<form action="/upgrade">
+  <label for="pwd">Passwd:</label>
+  <input type="password" id="pwd" name="pwd" minlength="5">&nbsp;&nbsp;
+  <input type="submit" value="UPGRADE">
+</form>
+""","""<form action="%s">
+    <input type="submit" value="RESET" />
+</form>
+""","Wiatrak-holender1","klumpioky03"))
 
 from machine import I2C, Timer, RTC
 from network import WLAN, STA_IF
@@ -22,22 +45,15 @@ from gc import collect, mem_free
 from sh1106 import SH1106_I2C
 from bme280 import BME280
 from time import sleep
-'''
-html = """<!DOCTYPE html>
-<html>
-    <head></head>
-    <body>%s</body>
-</html>
-"""
-'''
+
 i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
 i2c1 = I2C(1, sda=Pin(14), scl=Pin(15), freq=400000)
 
-bmesup = Pin(13, Pin.OUT)
-bmesup.on()
+bmesup = Pin(13, Pin.OUT, value=1)
+#bmesup.on()
 pir = Pin(28, Pin.IN)
-led = Pin('LED', Pin.OUT)
-led.on()
+led = Pin('LED', Pin.OUT, value=1)
+#led.on()
 modpin = Pin(16, Pin.OUT)
 p20 = Pin(20, Pin.IN, Pin.PULL_UP)
 p21 = Pin(21, Pin.IN, Pin.PULL_UP)
@@ -46,15 +62,13 @@ neopin = Pin(2, Pin.OUT)
 print(i2c.scan(), i2c1.scan())
 if 60 in i2c.scan():
     lcd = True
-else:
-    lcd = False
-
-if lcd:
     display = SH1106_I2C(128, 64, i2c)
     display.flip()
     display.fill(0)
     display.text('Start...', 0, 0, 1)
     display.show()
+else:
+    lcd = False
 
 sleep(6)
 roupin.value(0)
@@ -65,11 +79,12 @@ collect()
 bme280 = BME280(i2c=i2c1)
 wlan = WLAN(STA_IF)
 wlan.active(True)
-wlan.connect('Wiatrak-holender1', 'klumpioky03')
+wlan.connect(_STRINGS[3], _STRINGS[4])
+'''
 if lcd:
     display.text('WLAN aktywny', 0, 10, 1)
     display.show()
-
+'''
 import ntptimerp2 as ntptimem
 #from neopixel import NeoPixel
 from os import rename, remove
@@ -97,11 +112,6 @@ nokcount = int(4)
 #npval = 10
 ucc = int(0)
 
-_PASSWD = const('zp987-')
-#url = const('https://onedrive.live.com/download?cid=7A40866E01A106BA&resid=7A40866E01A106BA%21137441&authkey=AN0DlSOfEB27VcE')
-_URL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/cat/main.py')
-_CTRL_STR1 = const('#--version')
-
 modem = bool(0)
 router = bool(0)
 svolt = 0
@@ -110,7 +120,7 @@ samp = 0
 bamp = 0
 frapow = 0
 avcur = 0
-chp = 0
+chp = int(0)
 lrst = 'RESTART'
 result_str = 'GENERAL ERROR'
 
@@ -174,7 +184,7 @@ def connect():
     if lcd: display.fill(0)
     wtext = 'WLAN'
     if not wlan.active(): wlan.active(True)
-    if not wlan.isconnected(): wlan.connect('Wiatrak-holender1', 'klumpioky03')
+    if not wlan.isconnected(): wlan.connect(_STRINGS[3], _STRINGS[4])
     for n in range(6):
         if wlan.isconnected():
             print('ifconf:', wlan.ifconfig())
@@ -388,9 +398,7 @@ def tick(timer):
             nokcount -= 1
             ucc += 1
             if ucc > 65:
-                f = open('rstate.dat', 'w')
-                f.write('1')
-                f.close()                
+                fwrite('1')               
                 machine.reset()
             if nokcount < 3: modem = 0
             if not nokcount:
@@ -500,25 +508,6 @@ lrst = str(mday) + '.' + str(month) + '.' + str(year) + ' ' +str(hour) + ':' +st
 #p20.irq(trigger=Pin.IRQ_FALLING, handler=p20_int)
 #p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 
-html1 = """<!DOCTYPE html>
-<html>
-    <head></head>
-    <body>%s</body>
-</html>
-"""
-
-passhtml = """<form action="/upgrade">
-  <label for="pwd">Passwd:</label>
-  <input type="password" id="pwd" name="pwd" minlength="5">&nbsp;&nbsp;
-  <input type="submit" value="UPGRADE">
-</form>
-"""
-
-reshtml = """<form action="%s">
-    <input type="submit" value="RESET" />
-</form>
-"""
-
 from server import webserver
 
 app = webserver()
@@ -526,7 +515,7 @@ app = webserver()
 @app.route('/')
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
+    await response.send(_STRINGS[0] % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
 
 @app.route('/params')
 async def index(request, response):
@@ -537,7 +526,7 @@ async def index(request, response):
 # zwraca stan pinow sterujacych modemem i routerem
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % (str(roupin.value()) + ';' + str(modpin.value())))
+    await response.send(_STRINGS[0] % (str(roupin.value()) + ';' + str(modpin.value())))
 
 @app.route('/modem')
 # zalacza modem na stale
@@ -547,13 +536,13 @@ async def index(request, response):
     print(modovr1)
     respstr = 'OK1' if modovr1 else 'OK0'
     await response.start_html()
-    await response.send(html1 % respstr)
+    await response.send(_STRINGS[0] % respstr)
   
 @app.route('/modemchk')
 async def index(request, response):
     await response.start_html()
     respstr = 'OK1' if modovr1 else 'OK0'
-    await response.send(html1 % respstr)
+    await response.send(_STRINGS[0] % respstr)
 
 @app.route('/router')
 # zalacza router na stale
@@ -563,27 +552,25 @@ async def index(request, response):
     print(rouovr1)
     respstr = 'OK1' if rouovr1 else 'OK0'
     await response.start_html()
-    await response.send(html1 % respstr)
+    await response.send(_STRINGS[0] % respstr)
    
 @app.route('/routerchk')
 async def index(request, response):
     await response.start_html()
     respstr = 'OK1' if rouovr1 else 'OK0'
-    await response.send(html1 % respstr)
+    await response.send(_STRINGS[0] % respstr)
    
 @app.route('/resetconf')
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % reshtml % 'reset')
+    await response.send(_STRINGS[0] % _STRINGS[2] % 'reset')
 
 @app.route('/reset')
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % 'OK RESET')
+    await response.send(_STRINGS[0] % 'OK RESET')
     sleep(1)
-    f = open('rstate.dat', 'w')
-    f.write('1')
-    f.close()
+    fwrite('1')
     machine.reset()
     
 @app.route('/lockreset')
@@ -597,7 +584,7 @@ async def index(request, response):
     #sleep(0.6)
     #if not rouovr1: roupin.value(0)
     respstr = 'OK ' + 'M=' + str(modem) + ' R=' + str(router)
-    await response.send(html1 % respstr)
+    await response.send(_STRINGS[0] % respstr)
 
 @app.route('/msolaroff')
 async def index(request, response):
@@ -605,12 +592,12 @@ async def index(request, response):
     modem = 0
     modpin.value(0)
     await response.start_html()
-    await response.send(html1 % 'OK')
+    await response.send(_STRINGS[0] % 'OK')
 
 @app.route('/upgradeconf')
 async def index(request, response):
     await response.start_html()
-    await response.send(html1 % passhtml)
+    await response.send(_STRINGS[0] % _STRINGS[1])
     
 @app.route('/upgrade')
 async def index(request, response):
@@ -622,14 +609,14 @@ async def index(request, response):
     qs1 = request.query_string.decode('utf-8').split('=')[1]
     if qs1 == _PASSWD:
         print('passok')
-        await response.send(html1 % 'downloading...')
+        await response.send(_STRINGS[0] % 'downloading...')
         with open("_main.py", "wb") as f:
             print('start')
             for data_chunk in download_in_chunks(_URL):
                 if data_chunk.startswith(_CTRL_STR1): init_str = True    
                 f.write(data_chunk)
         await response.start_html()
-        await response.send(html1 % ('downloaded...'))
+        await response.send(_STRINGS[0] % ('downloaded...'))
         collect()
         print('downloaded')
         end_str = True
@@ -640,9 +627,9 @@ async def index(request, response):
             #fileop('main.err', wr_error('NEW FIRMWARE\n'), 'a')
         
         await response.start_html()
-        await response.send(html1 % result_str)
+        await response.send(_STRINGS[0] % result_str)
     else:
-        await response.send(html1 % 'WRONG PASS')        
+        await response.send(_STRINGS[0] % 'WRONG PASS')        
     tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
     tim1.init(freq=0.015, mode=Timer.PERIODIC, callback=ch_conn)
 
@@ -651,8 +638,6 @@ if wifi:
 else:
     print('Serwer zatrzymany')
     sleep(30)
-    f = open('rstate.dat', 'w')
-    f.write('1')
-    f.close()
+    fwrite('1')
     machine.reset()
 #--$FE--
