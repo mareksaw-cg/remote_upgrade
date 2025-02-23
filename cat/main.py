@@ -252,7 +252,7 @@ def ch_conn(timer):
     if not wlan.isconnected():
         if not wlan.active(): wlan.active(True)
         if wifi:
-            wlan.connect('Wiatrak-holender1', 'klumpioky03')
+            wlan.connect(_STRINGS[3], _STRINGS[4])
             print('Ponowne laczenie!')
         else:
             connect()
