@@ -1,4 +1,4 @@
-#--version0.961_230225--    
+#--version0.971_240225--    
 from machine import Pin
 
 def fwrite(valstr):
@@ -85,7 +85,7 @@ if lcd:
     display.text('WLAN aktywny', 0, 10, 1)
     display.show()
 '''
-import ntptimerp2 as ntptimem
+import ntptimerp3 as ntptimem
 #from neopixel import NeoPixel
 from os import rename, remove
 
@@ -526,7 +526,7 @@ async def index(request, response):
 # zwraca stan pinow sterujacych modemem i routerem
 async def index(request, response):
     await response.start_html()
-    await response.send(_STRINGS[0] % (str(roupin.value()) + ';' + str(modpin.value())))
+    await response.send(_STRINGS[0] % (str(roupin.value()) + ';' + str(modpin.value()) + ';' + lrst.split(" ")[1]))
 
 @app.route('/modem')
 # zalacza modem na stale
