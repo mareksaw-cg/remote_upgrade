@@ -156,6 +156,8 @@ spi = SPI(1, baudrate=1000000, polarity=0, phase=0, sck=Pin(14), mosi=Pin(15))
 cs = Pin(13, Pin.OUT)
 
 from max7219 import Matrix8x8
+from time import sleep
+from urequests import get as urequestsget
 
 display = Matrix8x8(spi, cs, 4)
 display.brightness(0)
@@ -186,6 +188,13 @@ clr = ''
 result_str = 'GENERAL ERROR'
 proceed = False
 
+while not wlan.isconnected():
+    print('waiting for lan')
+    sleep(1)
+
+wifi = True
+print('ifconf:', wlan.ifconfig())
+
 f = open('backup.dat')
 enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0 = [int(i) for i in f.read().split(';')]
 f.close()
@@ -199,9 +208,7 @@ print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf
 
 collect()
 
-from time import sleep
 import ntptimerp3 as ntptimem
-from urequests import get as urequestsget
 from os import rename, remove
 from uping import ping
 
@@ -535,13 +542,6 @@ Koniec obslugi timera
 '''
 led.off()
 beep(1, 0.01)
-
-while not wlan.isconnected():
-    print('waiting for lan')
-    sleep(1)
-
-wifi = True
-print('ifconf:', wlan.ifconfig())
 
 display.fill(0)
 display.text('IP', 0, 0, 1)
