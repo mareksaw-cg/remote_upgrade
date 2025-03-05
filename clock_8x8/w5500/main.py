@@ -1,4 +1,4 @@
-#--version0.997.5a_050325--
+#--version0.997.5_050325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 DEBUG = False
@@ -189,6 +189,11 @@ proceed = False
 f = open('backup.dat')
 enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0 = [int(i) for i in f.read().split(';')]
 f.close()
+
+if pws:
+    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=2)
+    data = r.content
+    r.close()
 
 print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0)
 
