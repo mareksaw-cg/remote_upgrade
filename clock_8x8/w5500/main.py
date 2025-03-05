@@ -1,7 +1,7 @@
-#--version0.997.5_050325--
+#--version0.997.5a_050325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
-DEBUG = True
+DEBUG = False
 
 try:
     f = open('main.py', 'r')
@@ -10,7 +10,7 @@ try:
 except:
     line1 = 'error'
     
-from micropython import const, schedule
+from micropython import const
 
 _STRINGS = const(("""<!DOCTYPE html>
 <html>
