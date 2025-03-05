@@ -200,7 +200,7 @@ enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0 = [i
 f.close()
 
 if pws:
-    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=2)
+    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
     data = r.content
     r.close()
 
