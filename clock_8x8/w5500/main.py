@@ -183,8 +183,6 @@ amp2 = 0
 qs = '0;0'
 clr = ''
 
-init_str = False
-end_str = False
 result_str = 'GENERAL ERROR'
 proceed = False
 
@@ -803,6 +801,8 @@ async def index(request, response):
 
 @app.route('/upgrade')
 async def index(request, response):
+    init_str = False
+    end_str = True
     tim.deinit()
     collect()
     await response.start_html()
@@ -819,7 +819,6 @@ async def index(request, response):
         await response.send(_STRINGS[1] % ('downloaded...'))
         collect()
         if DEBUG: print('downloaded')
-        end_str = True
                 
         if init_str and end_str:
             rename('_main.py', 'main.py')
