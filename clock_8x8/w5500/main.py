@@ -203,6 +203,7 @@ if pws:
     r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
     data = r.content
     r.close()
+    pws = True if 'SOLAR' in data else False
 
 print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0)
 
