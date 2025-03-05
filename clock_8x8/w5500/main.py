@@ -74,7 +74,7 @@ i2cscan = i2c.scan()
 inaok = False
 ina2ok = False
 
-if 64 or 69 in i2cscan:
+if 64 in i2cscan or 69 in i2cscan:
     try:
         collect()
         from ina219l import INA219
