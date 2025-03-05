@@ -211,12 +211,18 @@ def beep(repeat=1, duration=0.06, pause=0.3):
         sleep(duration)
         beeppin.value(0)
         sleep(pause)
-
+'''
 def checksum(msg):
     v = 21
     for c in msg: v ^= ord(c)
     return v
 
+def urget(url, timeout=2):
+    r = urequestsget(url, timeout)
+    data = r.content
+    r.close()
+    return data
+'''
 def getntp1():
     if DEBUG: print('getntp')
     global ntpok
@@ -256,12 +262,6 @@ def fileop(path, content, action):
         
 def wr_error(msg):
     return str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    ' + msg
-    
-def urget(url, timeout=2):
-    r = urequestsget(url, timeout)
-    data = r.content
-    r.close()
-    return data
 
 def get_pins():
     if DEBUG: print('pins')
@@ -301,6 +301,10 @@ def reset_cat():
     data = r.content
     r.close()
     return data
+
+def chkping(url):
+    if DEBUG: print('ping ' + url)
+    return ping(url, count=1, timeout=400, quiet=True)[1]
 
 def download_in_chunks(url, chunk_size=512):
     global result_str, proceed
@@ -401,12 +405,12 @@ def tick(timer):
             elif sound: beep(mm // 15)
             collect()
             if modovr:
-                if not ping('8.8.8.8', count=1, timeout=400, quiet=True)[1]:
-                    schedule(reset_cat, 0)
+                if not chkping('8.8.8.8'):
+                    reset_cat()
                     fileop('main.err', wr_error('CAT RESET NO PING AND MODOVR\n'), 'a')
             
         if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
-            schedule(reset_cat, 0)
+            reset_cat()
             fileop('main.err', wr_error('ROUTER RELAY ERROR'), 'a')
             
         if amp == 0 and amp2 == 0:
@@ -419,8 +423,8 @@ def tick(timer):
 
     if ss == 5:
         if DEBUG: print('chk tv/backup/ntp')
-        rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
-        if rping:
+        #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
+        if chkping('10.0.0.95'):
             tvmins += 1
             if not frdisable:
                 frdisable = True
@@ -845,6 +849,7 @@ except:
     fileop('main.err', wr_error('SIGNAL send error\n'), 'a')
 
 tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
+print('clock started')
 '''
 if not lan:
     tim1 = Timer()
