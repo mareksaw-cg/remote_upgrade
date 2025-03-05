@@ -1,6 +1,8 @@
 #--version0.997.5_050325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
+DEBUG = True
+
 try:
     f = open('main.py', 'r')
     line1 = f.readline().split('--')[1][7:]
@@ -8,7 +10,7 @@ try:
 except:
     line1 = 'error'
     
-from micropython import const
+from micropython import const, schedule
 
 _STRINGS = const(("""<!DOCTYPE html>
 <html>
@@ -218,7 +220,7 @@ def checksum(msg):
     return v
 
 def getntp1():
-    print('getntp')
+    if DEBUG: print('getntp')
     global ntpok
     ntpok = False
     if wlan.isconnected():
@@ -257,8 +259,14 @@ def fileop(path, content, action):
 def wr_error(msg):
     return str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    ' + msg
     
+def urget(url, timeout=2):
+    r = urequestsget(url, timeout)
+    data = r.content
+    r.close()
+    return data
+
 def get_pins():
-    print('pins')
+    if DEBUG: print('pins')
     global roupin, modpin, clr
     r = urequestsget("http://10.0.0.56:1412/pins", timeout=2)
     data = r.content
@@ -339,7 +347,7 @@ def tick(timer):
             if lcdon:
                 lcdon = False
                 display.off()
-                print('disp off')
+                if DEBUG: print('disp off')
                 if lcd: lcddisplay.poweroff()
     else:
         lmove = str(hh) + ':' + str(mm)
@@ -347,7 +355,7 @@ def tick(timer):
         if not lcdon:
             lcdon = True
             display.init()
-            print('disp on')
+            if DEBUG: print('disp on')
             if lcd: lcddisplay.poweron()
     
     show8x8(hh, mm, ss, ntpok)
@@ -370,7 +378,7 @@ def tick(timer):
         else:
             outday += powa        
     
-    print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
+    if DEBUG: print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
     
     if volt2 < 12.2 and modpin and not modovr:
         r = urequestsget("http://10.0.0.56:1412/msolaroff", timeout=3)
@@ -380,8 +388,6 @@ def tick(timer):
         get_pins()
     
     if ss == 0:
-        
-        collect()
         
         rstcount += 1
         if rstcount == 10:
@@ -395,13 +401,14 @@ def tick(timer):
         if not mm % 15:
             if not mm and sound: beep(1, 0.35, 0)
             elif sound: beep(mm // 15)
+            collect()
             if modovr:
                 if not ping('8.8.8.8', count=1, timeout=400, quiet=True)[1]:
-                    reset_cat()
+                    schedule(reset_cat, 0)
                     fileop('main.err', wr_error('CAT RESET NO PING AND MODOVR\n'), 'a')
             
         if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
-            reset_cat()
+            schedule(reset_cat, 0)
             fileop('main.err', wr_error('ROUTER RELAY ERROR'), 'a')
             
         if amp == 0 and amp2 == 0:
@@ -413,7 +420,7 @@ def tick(timer):
             machine.reset()
 
     if ss == 5:
-        print('chk tv/backup/ntp')
+        if DEBUG: print('chk tv/backup/ntp')
         rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
         if rping:
             tvmins += 1
@@ -472,10 +479,10 @@ def tick(timer):
         if sau:
             if not pws and volt > 19.3:
                 switch_solar()
-                print('solar on')
+                if DEBUG: print('solar on')
             if pws and amp2 > chp:
                 switch_solar()
-                print('solar off')
+                if DEBUG: print('solar off')
     '''                
     if ss == 20 and not mm % 2:
         refvolt = volt
@@ -731,7 +738,7 @@ async def index(request, response):
     await response.start_html()
     qs1 = request.query_string.decode('utf-8')
     qs = qs1.split('=')
-    print('send signal')
+    if DEBUG: print('send signal')
     if qs[0] == 'msg': send_signal(qs[1])
     await response.send(_STRINGS[1] % 'OK' + qs[1])
     
@@ -742,11 +749,11 @@ async def index(request, response):
     
 @app.route('/parameters')
 async def index(request, response):
-    print('parameters')
+    if DEBUG: print('parameters')
     global qs, rstcount, modpin, roupin
     qs = request.query_string.decode('utf-8')
     if qs != '':
-        print(qs)
+        if DEBUG: print(qs)
         partemp = qs.split(';')
         roupin = bool(int(partemp[2]))
         modpin = bool(int(partemp[3]))
@@ -803,7 +810,7 @@ async def index(request, response):
     if qs1 == _STRINGS[9]:
         await response.send(_STRINGS[1] % 'downloading...')
         with open("_main.py", "wb") as f:
-            print('start')
+            if DEBUG: print('start')
             for data_chunk in download_in_chunks(_STRINGS[8]):
                 if data_chunk.startswith(_STRINGS[10]): init_str = True    
                 f.write(data_chunk)
@@ -811,7 +818,7 @@ async def index(request, response):
         await response.start_html()
         await response.send(_STRINGS[1] % ('downloaded...'))
         collect()
-        print('downloaded')
+        if DEBUG: print('downloaded')
         end_str = True
                 
         if init_str and end_str:
