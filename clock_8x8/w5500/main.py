@@ -1,7 +1,10 @@
 #--version0.998.5_060325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
+
 DEBUG = False
+wdten = True
+lan = True
 
 try:
     f = open('main.py', 'r')
@@ -60,9 +63,6 @@ _STRINGS = const(("""<!DOCTYPE html>
 
 from machine import I2C, Pin
 from gc import collect, mem_free
-
-wdten = True
-lan = True
 
 beeppin = Pin(28, Pin.OUT)
 pir = Pin(2, Pin.IN)
