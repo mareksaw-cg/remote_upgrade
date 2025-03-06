@@ -560,6 +560,7 @@ while not ntpok:
 print('ntp ok')
 display.text('NT', 16, 0, 1)
 display.show()
+wdt.feed()
 
 (year, month, mday, wday, hh, mm, ss, msecs) = rtc.datetime()
 rsttime = str(hh) + ':' + str(mm) + ' ' + str(ss)
@@ -852,7 +853,7 @@ async def index(request, response):
 lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
 rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
-
+wdt.feed()
 if pws:
     r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
     data = r.content
