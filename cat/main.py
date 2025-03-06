@@ -88,6 +88,7 @@ if lcd:
 import ntptimerp3 as ntptimem
 #from neopixel import NeoPixel
 from os import rename, remove
+from uping import ping
 
 #np = NeoPixel(neopin, 1)
 
@@ -152,6 +153,10 @@ def p21_int(Pin):
     sleep(0.3)
     p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 '''
+def chkping(url):
+    print('ping ' + url)
+    return ping(url, count=1, timeout=350, quiet=True)[1]
+
 def download_in_chunks(url, chunk_size=512):
     global result_str, proceed
     try:
@@ -410,7 +415,12 @@ def tick(timer):
     if glk1:
         router = 0
         modem = 0
-    
+    '''
+    if modovr1:
+        if bvolt < 12.2:
+            if not ping('8.8.8.8'):
+                modovr1 = 0
+    '''    
     if not second % 2:
         modpin.value(modem or modovr1)
     else:
