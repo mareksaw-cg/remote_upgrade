@@ -626,7 +626,10 @@ async def index(request, response):
 @app.route('/modemconf')
 async def index(request, response):
     await response.start_html()
-    await response.send(_STRINGS[1] % _STRINGS[2] % 'modem1')
+    if volt2 > 12.2 and (volt2 * amp2 / 1000) < 20:
+        await response.send(_STRINGS[1] % _STRINGS[2] % 'modem1')
+    else:
+        await response.send(_STRINGS[1] % 'NISKIE PARAMETRY ZASILANIA!')
 
 @app.route('/modem1')
 async def index(request, response):
