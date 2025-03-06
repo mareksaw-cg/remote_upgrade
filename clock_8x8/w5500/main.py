@@ -237,6 +237,10 @@ def urget(url, timeout=2):
     r.close()
     return data
 '''
+def debug_print(*args, **kwargs):
+    if DEBUG:
+        print(*args, **kwargs)
+
 def getntp1():
     if DEBUG: print('getntp')
     global ntpok
@@ -435,6 +439,7 @@ def tick(timer):
             machine.reset()
 
     if ss == 5:
+        collect()
         if DEBUG: print('chk tv/backup/ntp')
         #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
         rping = chkping('10.0.0.95')
@@ -453,7 +458,6 @@ def tick(timer):
             r.close()
             
         if mm and not mm % 11:
-            collect()
             display.init()
             fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)), 'w')
             getntp1()
