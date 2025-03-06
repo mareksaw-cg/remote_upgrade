@@ -189,22 +189,9 @@ clr = ''
 result_str = 'GENERAL ERROR'
 proceed = False
 
-while not wlan.isconnected():
-    print('waiting for lan')
-    sleep(1)
-
-wifi = True
-print('ifconf:', wlan.ifconfig())
-
 f = open('backup.dat')
 enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0 = [int(i) for i in f.read().split(';')]
 f.close()
-
-if pws:
-    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
-    data = r.content
-    r.close()
-    pws = True if 'SOLAR' in data else False
 
 print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0)
 
@@ -870,7 +857,20 @@ print('clock started')
 if not lan:
     tim1 = Timer()
     tim1.init(freq=0.0025, mode=Timer.PERIODIC, callback=ch_conn)
-'''    
+'''
+while not wlan.isconnected():
+    print('waiting for lan')
+    sleep(1)
+
+wifi = True
+print('ifconf:', wlan.ifconfig())
+
+if pws:
+    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
+    data = r.content
+    r.close()
+    pws = True if 'SOLAR' in data else False
+
 if wifi:
     app.run(host='0.0.0.0', port=1411)
     print('serwer uruchomiony')
