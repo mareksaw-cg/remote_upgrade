@@ -1,4 +1,4 @@
-#--version0.997.5_060325--
+#--version0.998.5_060325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 DEBUG = False
