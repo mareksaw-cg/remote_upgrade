@@ -535,6 +535,17 @@ def tick(timer):
 '''
 Koniec obslugi timera
 '''
+if wdten: wdt = WDT(timeout=8001)
+
+while not wlan.isconnected():
+    print('waiting for lan')
+    sleep(1)
+
+wifi = True
+print('ifconf:', wlan.ifconfig())
+
+wdt.feed()
+
 led.off()
 beep(1, 0.01)
 
@@ -842,7 +853,11 @@ lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
 rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
 
-if wdten: wdt = WDT(timeout=8001)
+if pws:
+    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
+    data = r.content
+    r.close()
+    pws = True if 'SOLAR' in data else False
 
 fileop('main.err', wr_error('START\n'), 'a')
 
@@ -858,19 +873,6 @@ if not lan:
     tim1 = Timer()
     tim1.init(freq=0.0025, mode=Timer.PERIODIC, callback=ch_conn)
 '''
-while not wlan.isconnected():
-    print('waiting for lan')
-    sleep(1)
-
-wifi = True
-print('ifconf:', wlan.ifconfig())
-
-if pws:
-    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
-    data = r.content
-    r.close()
-    pws = True if 'SOLAR' in data else False
-
 if wifi:
     app.run(host='0.0.0.0', port=1411)
     print('serwer uruchomiony')
