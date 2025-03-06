@@ -242,7 +242,7 @@ def debug_print(*args, **kwargs):
         print(*args, **kwargs)
 
 def getntp1():
-    if DEBUG: print('getntp')
+    debug_print('getntp')
     global ntpok
     ntpok = False
     if wlan.isconnected():
@@ -282,7 +282,7 @@ def wr_error(msg):
     return str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    ' + msg
 
 def get_pins():
-    if DEBUG: print('pins')
+    debug_print('pins')
     global roupin, modpin, clr
     r = urequestsget("http://10.0.0.56:1412/pins", timeout=2)
     data = r.content
@@ -321,7 +321,7 @@ def reset_cat():
     return data
 
 def chkping(url):
-    if DEBUG: print('ping ' + url)
+    debug_print('ping ' + url)
     return ping(url, count=1, timeout=350, quiet=True)[1]
 
 def download_in_chunks(url, chunk_size=512):
@@ -367,7 +367,7 @@ def tick(timer):
             if lcdon:
                 lcdon = False
                 display.off()
-                if DEBUG: print('disp off')
+                debug_print('disp off')
                 if lcd: lcddisplay.poweroff()
     else:
         lmove = str(hh) + ':' + str(mm)
@@ -375,7 +375,7 @@ def tick(timer):
         if not lcdon:
             lcdon = True
             display.init()
-            if DEBUG: print('disp on')
+            debug_print('disp on')
             if lcd: lcddisplay.poweron()
     
     show8x8(hh, mm, ss, ntpok)
@@ -398,7 +398,7 @@ def tick(timer):
         else:
             outday += powa        
     
-    if DEBUG: print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
+    debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
     
     if volt2 < 12.2 and modpin and not modovr:
         r = urequestsget("http://10.0.0.56:1412/msolaroff", timeout=3)
@@ -440,7 +440,7 @@ def tick(timer):
 
     if ss == 5:
         collect()
-        if DEBUG: print('chk tv/backup/ntp')
+        debug_print('chk tv/backup/ntp')
         #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
         rping = chkping('10.0.0.95')
         if rping:
@@ -500,10 +500,10 @@ def tick(timer):
         if sau:
             if not pws and volt > 19.3:
                 switch_solar()
-                if DEBUG: print('solar on')
+                debug_print('solar on')
             if pws and amp2 > chp:
                 switch_solar()
-                if DEBUG: print('solar off')
+                debug_print('solar off')
     '''                
     if ss == 20 and not mm % 2:
         refvolt = volt
@@ -575,7 +575,7 @@ app = webserver()
 
 @app.route('/msmsms')
 async def index(request, response):
-    if DEBUG: print('serwer')
+    debug_print('serwer')
     global rstcount
     await response.start_html()
     rows = ['<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('PVM', volt, amp), '<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('BAT', volt2, amp2), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('+E', round(enday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('-E', round(outday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POW', round((volt * amp / 1000), 1)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POB', round((volt2 * amp2 / 1000), 1)), '<tr><td><a href="modemconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MOV', str(modovr)), '<tr><td><a href="routerconf">%s</a></td><td colspan="2">%s</td></tr>' % ('ROV', str(rouovr)), '<tr><td><a href="glockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('GLK', str(glk)), '<tr><td><a href="nlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MLK', str(nlk)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('QST', qs), '<tr><td><a href="pwrswconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PWS', str(pws)), '<tr><td><a href="solautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SAU', str(sau)), '<tr><td><a href="chpset">%s</a></td><td colspan="2">%s</td></tr>' % ('CHP', str(chp)), '<tr><td><a href="priautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PAU', (str(pau))),'<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TON', str(rping)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TVT', str(tvmins)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FRD', str(frdisable)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('P13', str(p13)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LUX', str(lux)), '<tr><td><a href="resetconf">%s</a></td><td colspan="2">%s</td></tr>' % ('LRS', (rsttime + ';' + str(rstcount))), '<tr><td><a href="catreset">%s</a></td><td colspan="2">%s</td></tr>' % ('CLR', clr), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LMV', lmove), '<tr><td><a href="pcf0conf">%s</a></td><td colspan="2">%s</td></tr>' % ('PC0', str(pcf0)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('PIN', str(roupin) + ';' + str(modpin)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FWV', line1), '<tr><td>%s</td><td colspan="2"><a href="readsrc">%s</a></td></tr>' % ('SRC', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="readerrconf">%s</a></td></tr>' % ('ERR', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="upgradeconf">%s</a></td></tr>' % ('FMW', 'UPGRADE'), '<tr><td>%s</td><td colspan="2"><a href="alert">%s</a></td></tr>' % ('ALM', 'START'), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('MEM', str(mem_free())), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LET', str(lext)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LDT', str(hh) + ':' + str(mm) + ' ' + str(ss))]
@@ -753,7 +753,7 @@ async def index(request, response):
     await response.start_html()
     qs1 = request.query_string.decode('utf-8')
     qs = qs1.split('=')
-    if DEBUG: print('send signal')
+    debug_print('send signal')
     if qs[0] == 'msg': send_signal(qs[1])
     await response.send(_STRINGS[1] % 'OK' + qs[1])
     
@@ -764,11 +764,11 @@ async def index(request, response):
     
 @app.route('/parameters')
 async def index(request, response):
-    if DEBUG: print('parameters')
+    debug_print('parameters')
     global qs, rstcount, modpin, roupin
     qs = request.query_string.decode('utf-8')
     if qs != '':
-        if DEBUG: print(qs)
+        debug_print(qs)
         partemp = qs.split(';')
         roupin = bool(int(partemp[2]))
         modpin = bool(int(partemp[3]))
@@ -827,7 +827,7 @@ async def index(request, response):
     if qs1 == _STRINGS[9]:
         await response.send(_STRINGS[1] % 'downloading...')
         with open("_main.py", "wb") as f:
-            if DEBUG: print('start')
+            debug_print('start')
             for data_chunk in download_in_chunks(_STRINGS[8]):
                 if data_chunk.startswith(_STRINGS[10]): init_str = True    
                 f.write(data_chunk)
@@ -835,7 +835,7 @@ async def index(request, response):
         await response.start_html()
         await response.send(_STRINGS[1] % ('downloaded...'))
         collect()
-        if DEBUG: print('downloaded')
+        debug_print('downloaded')
                 
         if init_str and end_str:
             rename('_main.py', 'main.py')
