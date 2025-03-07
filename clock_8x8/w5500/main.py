@@ -1,10 +1,10 @@
-#--version0.998.5_060325--
+#--version0.998.5_070325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
 DEBUG = False
 wdten = True
-lan = True
+#lan = True
 
 try:
     f = open('main.py', 'r')
@@ -55,10 +55,7 @@ _STRINGS = const(("""<!DOCTYPE html>
 </form>
 """, "https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/clock_8x8/w5500/main.py", "zp987-", "#--version"))
 
-#_PASSWD = const('zp987-')
 #_SRCURL = const('https://onedrive.live.com/download?resid=7A40866E01A106BA%21137386&authkey=!AKX-JpKATav5IZ8')
-#_SRCURL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/clock_8x8/w5500/main.py')
-#_CTRL_STR1 = const('#--version')
 #ctrl_str2 = (chr(36) + chr(70) + chr(69) + chr(45) + chr(45)).encode()
 
 from machine import I2C, Pin
@@ -66,7 +63,8 @@ from gc import collect, mem_free
 
 beeppin = Pin(28, Pin.OUT)
 pir = Pin(2, Pin.IN)
-led = Pin(25 if lan else 'LED', Pin.OUT, value=1)
+led = Pin(25, Pin.OUT, value=1)
+#led = Pin(25 if lan else 'LED', Pin.OUT, value=1)
 #tvin = Pin(9, Pin.IN, Pin.PULL_UP)
 #chr_en = Pin(5, Pin.OUT, value=0)
 
@@ -170,7 +168,7 @@ curcount = int(0)
 lmove = 'RESET'
 lcdon = True
 ntpok = False
-wifi = False
+#wifi = False
 modovr = False
 rouovr = False
 roupin = False
@@ -225,8 +223,7 @@ def urget(url, timeout=2):
     return data
 '''
 def debug_print(*args, **kwargs):
-    if DEBUG:
-        print(*args, **kwargs)
+    if DEBUG: print(*args, **kwargs)
 
 def getntp1():
     debug_print('getntp')
@@ -289,10 +286,7 @@ def switch_solar():
     r.close()
     if 'SOLAR' in data: pws = True
     if 'MAINS' in data: pws = False
-'''    
-def tickwdt(timer):
-    wdt.feed()
-'''    
+   
 def send_signal(msg):
     r = urequestsget("http://10.0.0.13:8041/signal?msg=" + msg.replace(' ', '+'), timeout=3)
     sleep(0.1)
@@ -415,7 +409,7 @@ def tick(timer):
             
         if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
             reset_cat()
-            fileop('main.err', wr_error('ROUTER RELAY ERROR'), 'a')
+            fileop('main.err', wr_error('ROUTER RELAY ERROR\n'), 'a')
             
         if amp == 0 and amp2 == 0:
             curcount += 1
@@ -494,25 +488,7 @@ def tick(timer):
             if pws and amp2 > chp:
                 switch_solar()
                 debug_print('solar off')
-    '''                
-    if ss == 20 and not mm % 2:
-        refvolt = volt
-        if pau:
-            if volt > 18.31 and amp2 <= chp and amp2 < 0:
-    #            chp = - (abs(amp2) // 100) * 100
-                chp = amp2 + 150
-                if chp > 0: chp = 0
 
-    if ss == 21 or ss == 51:            
-        if pau:
-            if volt > 18.31 and amp2 < 0 and amp2 > chp:
-                chp = amp2 + 100
-                if chp > 0: chp = 0
-#                chp += 100 if chp < 0 else 0
-                paucount += 1
-            else:
-                paucount = 0
-    '''
     if ss == 19 or ss == 49:        
         if pau and volt > 18.26 and amp2 < 0:
                 chp = amp2 + 125
@@ -537,17 +513,18 @@ def tick(timer):
     lext = ticks_ms() - lt1
 '''
 Koniec obslugi timera
+Uruchamianie sieci
 '''
-if wdten: wdt = WDT(timeout=8001)
-
+tloop = int(0)
 while not wlan.isconnected():
     print('waiting for lan')
+    led.toggle()
     sleep(1)
+    tloop += 1
+    if tloop > 60: machine.reset()
 
-wifi = True
+#wifi = True
 print('ifconf:', wlan.ifconfig())
-
-wdt.feed()
 
 led.off()
 beep(1, 0.01)
@@ -556,14 +533,16 @@ display.fill(0)
 display.text('IP', 0, 0, 1)
 display.show()
 
+tloop = int(0)
 while not ntpok:
     getntp1()
     sleep(0.5)
+    tloop += 1
+    if tloop > 60: break
     
 print('ntp ok')
 display.text('NT', 16, 0, 1)
 display.show()
-wdt.feed()
 
 (year, month, mday, wday, hh, mm, ss, msecs) = rtc.datetime()
 rsttime = str(hh) + ':' + str(mm) + ' ' + str(ss)
@@ -853,10 +832,12 @@ async def index(request, response):
         await response.send(_STRINGS[1] % 'WRONG PASS')        
     tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 
+if wdten: wdt = WDT(timeout=8001)
+
 lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
 rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
-wdt.feed()
+
 if pws:
     r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
     data = r.content
@@ -872,11 +853,14 @@ except:
 
 tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 print('clock started')
+
+app.run(host='0.0.0.0', port=1411)
+print('serwer uruchomiony')
 '''
 if not lan:
     tim1 = Timer()
     tim1.init(freq=0.0025, mode=Timer.PERIODIC, callback=ch_conn)
-'''
+
 if wifi:
     app.run(host='0.0.0.0', port=1411)
     print('serwer uruchomiony')
@@ -885,5 +869,6 @@ else:
     sleep(30)
     fileop('main.err', wr_error('no network after boot\n'), 'a')
     machine.reset()
+'''
 #'<tr><td><a href="tvlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('CHD', str(ch_en)), 
 #--$FE--
