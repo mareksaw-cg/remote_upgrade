@@ -445,7 +445,7 @@ def tick(timer):
         if mm and not mm % 11:
             display.init()
             fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)), 'w')
-            getntp1()
+            if wlan.isconnected(): getntp1()
 
         if not mm % 12:
             p13 = chkping('10.0.0.13')
