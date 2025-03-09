@@ -34,7 +34,7 @@ _STRINGS = const(("""<!DOCTYPE html>
     <input type="submit" value="RESET" />
 </form>
 """, """<form action="/chpwrite">
-  <label for="chpval">CHP=&nbsp;</label>
+  <label for="chpval">VAL=&nbsp;</label>
   <input type="text" id="chpval" name="chpval">&nbsp;&nbsp;
   <input type="submit" value="USTAW">
 </form>
@@ -178,7 +178,8 @@ modpin = False
 pcf0count = int(0)
 p13 = int(0)
 lext = int(0)
-tofd = ''
+tofd = int(0)
+sof = int(-90)
 
 volt = 0
 amp = 0
@@ -191,10 +192,10 @@ result_str = 'GENERAL ERROR'
 proceed = False
 
 f = open('backup.dat')
-enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0 = [int(i) for i in f.read().split(';')]
+enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa = [int(i) for i in f.read().split(';')]
 f.close()
 
-print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0)
+print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa)
 
 collect()
 
@@ -282,7 +283,7 @@ def get_pins(arg):
         modpin = bool(int(data[1]))
         clr = data[2]
         
-def switch_solar():
+def switch_solar(arg):
     global pws
     pws = not pws
     sstr = '/solar1' if pws else '/mains1'
@@ -334,11 +335,11 @@ def download_in_chunks(url, chunk_size=512):
         finally:
             response.close()
 
-def suntimes(yy, mm, dd, offset=-60):
+def suntimes(offset):
     doy = localtime()[7]
     
-    t1 = mktime((yy,3,(31-(int(5*yy/4+4))%7),1,0,0,0,0))
-    t2 = mktime((yy,10,(31-(int(5*yy/4+1))%7),1,0,0,0,0))
+    t1 = mktime((year,3,(31-(int(5*year/4+4))%7),1,0,0,0,0))
+    t2 = mktime((year,10,(31-(int(5*year/4+1))%7),1,0,0,0,0))
     t = mktime(localtime())
     
     if t >= t1 and t < t2:
@@ -349,16 +350,16 @@ def suntimes(yy, mm, dd, offset=-60):
     risemin = sunoffset + offset + 276.178 + 136.278 * cos(2 * 3.14151 * (doy + 7.05) / 365)
     setmin = sunoffset - offset +  1013.816 - 139.61 * cos(2 * 3.14159 * (doy + 13.084) / 365)
     
-    rtime = mktime((yy, mm , dd, int(risemin/60), int(risemin - int(risemin/60) * 60), 0, 0, 0))
-    stime = mktime((yy, mm , dd, int(setmin/60), int(setmin - int(setmin/60) * 60), 0, 0, 0))
+    rtime = mktime((year, month , mday, int(risemin/60), int(risemin - int(risemin/60) * 60), 0, 0, 0))
+    stime = mktime((year, month , mday, int(setmin/60), int(setmin - int(setmin/60) * 60), 0, 0, 0))
     if t > rtime and t < stime:
-        return 'DAY'
+        return True
     else:
-        return 'NIGHT'
+        return False
 
 def tick(timer):
 
-    global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd
+    global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd, sof
     lt1 = ticks_ms()
     wdt.feed()
     (year, month, mday, wday, hh, mm, ss, msecs) = rtc.datetime()
@@ -463,7 +464,13 @@ def tick(timer):
 
         if not mm % 12:
             p13 = chkping('10.0.0.13')
-            tofd = suntimes(year, month, mday, -60)
+            tofd = suntimes(sof)
+            if not pws and tofd and ssa:
+                pws = not pws
+                schedule(switch_solar, 0)
+            if pws and not tofd and ssa:
+                pws = not pws
+                schedule(switch_solar, 0)
         
     if hh == 23 and mm == 59 and ss > 57:
         
@@ -478,7 +485,7 @@ def tick(timer):
         outday = 0
         chp = -800
         tvmins = 0
-        fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)), 'w')
+        fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)), 'w')
         
     if not ss % 15:
         try:
@@ -502,10 +509,10 @@ def tick(timer):
     if ss == 11 or ss == 41:
         if sau:
             if not pws and volt > 19.3:
-                switch_solar()
+                schedule(switch_solar, 0)
                 debug_print('solar on')
             if pws and amp2 > chp:
-                switch_solar()
+                schedule(switch_solar, 0)
                 debug_print('solar off')
 
     if ss == 19 or ss == 49:        
@@ -578,7 +585,7 @@ async def index(request, response):
     debug_print('serwer')
     global rstcount
     await response.start_html()
-    rows = ['<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('PVM', volt, amp), '<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('BAT', volt2, amp2), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('+E', round(enday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('-E', round(outday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POW', round((volt * amp / 1000), 1)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POB', round((volt2 * amp2 / 1000), 1)), '<tr><td><a href="modemconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MOV', str(modovr)), '<tr><td><a href="routerconf">%s</a></td><td colspan="2">%s</td></tr>' % ('ROV', str(rouovr)), '<tr><td><a href="glockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('GLK', str(glk)), '<tr><td><a href="nlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MLK', str(nlk)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('QST', qs), '<tr><td><a href="pwrswconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PWS', str(pws)), '<tr><td><a href="solautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SAU', str(sau)), '<tr><td><a href="chpset">%s</a></td><td colspan="2">%s</td></tr>' % ('CHP', str(chp)), '<tr><td><a href="priautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PAU', (str(pau))),'<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TON', str(rping)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TVT', str(tvmins)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FRD', str(frdisable)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('P13', str(p13)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LUX', str(lux)), '<tr><td><a href="resetconf">%s</a></td><td colspan="2">%s</td></tr>' % ('LRS', (rsttime + ';' + str(rstcount))), '<tr><td><a href="catreset">%s</a></td><td colspan="2">%s</td></tr>' % ('CLR', clr), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LMV', lmove), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TOD', tofd), '<tr><td><a href="pcf0conf">%s</a></td><td colspan="2">%s</td></tr>' % ('PC0', str(pcf0)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('PIN', str(roupin) + ';' + str(modpin)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FWV', line1), '<tr><td>%s</td><td colspan="2"><a href="readsrc">%s</a></td></tr>' % ('SRC', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="readerrconf">%s</a></td></tr>' % ('ERR', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="upgradeconf">%s</a></td></tr>' % ('FMW', 'UPGRADE'), '<tr><td>%s</td><td colspan="2"><a href="alert">%s</a></td></tr>' % ('ALM', 'START'), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('MEM', str(mem_free())), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LET', str(lext)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LDT', str(hh) + ':' + str(mm) + ' ' + str(ss))]
+    rows = ['<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('PVM', volt, amp), '<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('BAT', volt2, amp2), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('+E', round(enday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('-E', round(outday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POW', round((volt * amp / 1000), 1)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POB', round((volt2 * amp2 / 1000), 1)), '<tr><td><a href="modemconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MOV', str(modovr)), '<tr><td><a href="routerconf">%s</a></td><td colspan="2">%s</td></tr>' % ('ROV', str(rouovr)), '<tr><td><a href="glockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('GLK', str(glk)), '<tr><td><a href="nlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MLK', str(nlk)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('QST', qs), '<tr><td><a href="pwrswconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PWS', str(pws)), '<tr><td><a href="solautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SAU', str(sau)), '<tr><td><a href="ssaconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SSA', str(ssa)), '<tr><td><a href="sofconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SOF', str(sof)), '<tr><td><a href="chpset">%s</a></td><td colspan="2">%s</td></tr>' % ('CHP', str(chp)), '<tr><td><a href="priautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PAU', (str(pau))),'<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TON', str(rping)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TVT', str(tvmins)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FRD', str(frdisable)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('P13', str(p13)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LUX', str(lux)), '<tr><td><a href="resetconf">%s</a></td><td colspan="2">%s</td></tr>' % ('LRS', (rsttime + ';' + str(rstcount))), '<tr><td><a href="catreset">%s</a></td><td colspan="2">%s</td></tr>' % ('CLR', clr), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LMV', lmove), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('DAY', str(tofd)), '<tr><td><a href="pcf0conf">%s</a></td><td colspan="2">%s</td></tr>' % ('PC0', str(pcf0)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('PIN', str(roupin) + ';' + str(modpin)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FWV', line1), '<tr><td>%s</td><td colspan="2"><a href="readsrc">%s</a></td></tr>' % ('SRC', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="readerrconf">%s</a></td></tr>' % ('ERR', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="upgradeconf">%s</a></td></tr>' % ('FMW', 'UPGRADE'), '<tr><td>%s</td><td colspan="2"><a href="alert">%s</a></td></tr>' % ('ALM', 'START'), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('MEM', str(mem_free())), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LET', str(lext)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LDT', str(hh) + ':' + str(mm) + ' ' + str(ss))]
     sresponse = _STRINGS[0] % '\n'.join(rows)
     await response.send(sresponse)
     rstcount = 0
@@ -679,7 +686,7 @@ async def index(request, response):
 
 @app.route('/pwrsw')
 async def index(request, response):
-    switch_solar()
+    schedule(switch_solar, 0)
     await response.start_html()
     await response.send(_STRINGS[1] % 'OK')
     
@@ -733,6 +740,18 @@ async def index(request, response):
     await response.start_html()
     await response.send(_STRINGS[1] % _STRINGS[2] % 'solaut')
     
+@app.route('/ssaaut')
+async def index(request, response):
+    global ssa
+    await response.start_html()
+    ssa = not ssa
+    await response.send(_STRINGS[1] % 'OK' + str(ssa))
+    
+@app.route('/ssaconf')
+async def index(request, response):
+    await response.start_html()
+    await response.send(_STRINGS[1] % _STRINGS[2] % 'ssaaut')
+    
 @app.route('/priaut')
 async def index(request, response):
     global pau
@@ -755,6 +774,11 @@ async def index(request, response):
     if chp > 0: chp = 0
     await response.send(_STRINGS[1] % 'OK' + str(chp))
     
+@app.route('/chpset')
+async def index(request, response):
+    await response.start_html()
+    await response.send(_STRINGS[1] % _STRINGS[4])
+    
 @app.route('/signal')
 async def index(request, response):
     await response.start_html()
@@ -763,11 +787,6 @@ async def index(request, response):
     debug_print('send signal')
     if qs[0] == 'msg': send_signal(qs[1])
     await response.send(_STRINGS[1] % 'OK' + qs[1])
-    
-@app.route('/chpset')
-async def index(request, response):
-    await response.start_html()
-    await response.send(_STRINGS[1] % _STRINGS[4])
     
 @app.route('/parameters')
 async def index(request, response):
@@ -860,7 +879,7 @@ if wdten: wdt = WDT(timeout=8001)
 lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
 rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
-tofd = suntimes(year, month, mday, -60)
+tofd = suntimes(sof)
 
 if pws:
     data = safe_get("http://10.0.0.8:8099/solar1", timeout=3)
