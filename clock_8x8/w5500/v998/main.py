@@ -215,17 +215,13 @@ def checksum(msg):
     v = 21
     for c in msg: v ^= ord(c)
     return v
-'''
-def safe_get(url, timeout=3):
-    try:
-        r = urequestsget(url, timeout=timeout)
-        data = r.content
-        r.close()
-        return data
-    except Exception as e:
-        debug_print("Network error for", url, ":", e)
-        return None
 
+def urget(url, timeout=2):
+    r = urequestsget(url, timeout)
+    data = r.content
+    r.close()
+    return data
+'''
 def debug_print(*args, **kwargs):
     if DEBUG: print(*args, **kwargs)
 
