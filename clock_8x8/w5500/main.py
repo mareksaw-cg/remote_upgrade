@@ -1,4 +1,4 @@
-#--version0.998.5_070325--
+#--version0.999.5_090325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -13,7 +13,7 @@ try:
 except:
     line1 = 'error'
     
-from micropython import const
+from micropython import const, schedule
 
 _STRINGS = const(("""<!DOCTYPE html>
 <html>
@@ -128,6 +128,7 @@ if 60 in i2cscan:
     try:
         from ssd1306 import SSD1306_I2C
         lcddisplay = SSD1306_I2C(128, 64, i2c)
+        lcddisplay.rotate(1)
         lcddisplay.fill(0)
         lcddisplay.text('Boot OK', 0, 0, 1)
         if inaok and ina2ok: lcddisplay.text('INA OK', 0, 10, 1)
@@ -229,7 +230,7 @@ def safe_get(url, timeout=3):
 def debug_print(*args, **kwargs):
     if DEBUG: print(*args, **kwargs)
 
-def getntp1():
+def getntp1(arg):
     debug_print('getntp')
     global ntpok
     ntpok = False
@@ -269,13 +270,11 @@ def fileop(path, content, action):
 def wr_error(msg):
     return str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hh) + ':' + str(mm) + '.' + str(ss) + '    ' + msg
 
-def get_pins():
+def get_pins(arg):
     debug_print('pins')
     global roupin, modpin, clr
-    r = urequestsget("http://10.0.0.56:1412/pins", timeout=2)
-    data = r.content
-    r.close()
-    if ';' in data:
+    data = safe_get("http://10.0.0.56:1412/pins", timeout=2)
+    if data is not None and ';' in data:
         data = data.decode().split('<body>')[1].split('</body>')[0].split(';')
         roupin = bool(int(data[0]))
         modpin = bool(int(data[1]))
@@ -285,11 +284,10 @@ def switch_solar():
     global pws
     pws = not pws
     sstr = '/solar1' if pws else '/mains1'
-    r = urequestsget("http://10.0.0.8:8099" + sstr, timeout=3)
-    data = r.content
-    r.close()
-    if 'SOLAR' in data: pws = True
-    if 'MAINS' in data: pws = False
+    data = safe_get("http://10.0.0.8:8099" + sstr, timeout=3)
+    if data is not None:
+        if 'SOLAR' in data: pws = True
+        if 'MAINS' in data: pws = False
    
 def send_signal(msg):
     r = urequestsget("http://10.0.0.13:8041/signal?msg=" + msg.replace(' ', '+'), timeout=3)
@@ -300,10 +298,8 @@ def reset_cat():
     global modovr, rouovr
     modovr = False
     rouovr = False
-    r = urequestsget("http://10.0.0.56:1412/reset", timeout=3)
-    data = r.content
-    r.close()
-    return data
+    data = safe_get("http://10.0.0.56:1412/reset", timeout=3)
+    if data is not None: return data
 
 def chkping(url):
     debug_print('ping ' + url)
@@ -386,11 +382,9 @@ def tick(timer):
     debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
     
     if volt2 < 12.2 and modpin and not modovr:
-        r = urequestsget("http://10.0.0.56:1412/msolaroff", timeout=3)
-        data = r.content
-        r.close()
-        sleep(0.5)
-        get_pins()
+        data = safe_get("http://10.0.0.56:1412/msolaroff", timeout=3)
+        sleep(0.3)
+        schedule(get_pins, 0)
     
     if ss == 0:
         
@@ -432,20 +426,16 @@ def tick(timer):
             tvmins += 1
             if not frdisable:
                 frdisable = True
-                r = urequestsget("http://10.0.0.8:8099/frstop", timeout=1)
-                data = r.content
-                r.close()
+                safe_get("http://10.0.0.8:8099/frstop", timeout=1)
 
         if not rping and frdisable:
             frdisable = False
-            r = urequestsget("http://10.0.0.8:8099/frstart", timeout=1)
-            data = r.content
-            r.close()
+            safe_get("http://10.0.0.8:8099/frstart", timeout=1)
             
         if mm and not mm % 11:
             display.init()
             fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)), 'w')
-            if wlan.isconnected(): getntp1()
+            schedule(getntp1, 0)
 
         if not mm % 12:
             p13 = chkping('10.0.0.13')
@@ -498,7 +488,7 @@ def tick(timer):
                 chp = amp2 + 125
                 if chp > 0: chp = 0        
         
-        get_pins()
+        schedule(get_pins, 0)
         
         if not pcf0 and roupin and (modpin or nlk) and volt > 19.01:
             pcf0count += 1
@@ -539,7 +529,7 @@ display.show()
 
 tloop = int(0)
 while not ntpok:
-    getntp1()
+    schedule(getntp1, 0)
     sleep(0.5)
     tloop += 1
     if tloop > 60: break
@@ -600,13 +590,15 @@ async def index(request, response):
 @app.route('/router1')
 async def index(request, response):
     global rouovr
-    r = urequestsget("http://10.0.0.56:1412/router", timeout=3)
-    data = r.content
-    r.close()
-    if 'OK1' in data: rouovr = True
-    if 'OK0' in data: rouovr = False
-    await response.start_html()
-    await response.send(_STRINGS[1] % 'OK')
+    data = safe_get("http://10.0.0.56:1412/router", timeout=3)
+    if data is not None:
+        if 'OK1' in data: rouovr = True
+        if 'OK0' in data: rouovr = False
+        await response.start_html()
+        await response.send(_STRINGS[1] % 'OK')
+    else:
+        await response.start_html()
+        await response.send(_STRINGS[1] % 'FAIL') 
     
 @app.route('/modemconf')
 async def index(request, response):
@@ -619,13 +611,15 @@ async def index(request, response):
 @app.route('/modem1')
 async def index(request, response):
     global modovr
-    r = urequestsget("http://10.0.0.56:1412/modem", timeout=3)
-    data = r.content
-    r.close()
-    if 'OK1' in data: modovr = True
-    if 'OK0' in data: modovr = False
-    await response.start_html()
-    await response.send(_STRINGS[1] % 'OK')
+    data = safe_get("http://10.0.0.56:1412/modem", timeout=3)
+    if data is not None:
+        if 'OK1' in data: modovr = True
+        if 'OK0' in data: modovr = False
+        await response.start_html()
+        await response.send(_STRINGS[1] % 'OK')
+    else:
+        await response.start_html()
+        await response.send(_STRINGS[1] % 'FAIL')        
 
 @app.route('/glock1')
 async def index(request, response):
@@ -843,10 +837,8 @@ rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
 
 if pws:
-    r = urequestsget("http://10.0.0.8:8099/solar1", timeout=3)
-    data = r.content
-    r.close()
-    pws = True if 'SOLAR' in data else False
+    data = safe_get("http://10.0.0.8:8099/solar1", timeout=3)
+    if data is not None: pws = True if 'SOLAR' in data else False
 
 fileop('main.err', wr_error('START\n'), 'a')
 
