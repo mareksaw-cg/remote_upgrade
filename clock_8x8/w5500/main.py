@@ -1,4 +1,4 @@
-#--version0.999.5_090325--
+#--version0.999.5_100325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -155,9 +155,9 @@ spi = SPI(1, baudrate=1000000, polarity=0, phase=0, sck=Pin(14), mosi=Pin(15))
 cs = Pin(13, Pin.OUT)
 
 from max7219 import Matrix8x8
-from time import sleep, ticks_ms, localtime, mktime
+from time import sleep, ticks_ms
 from urequests import get as urequestsget
-from math import cos
+from suntimes import suntime
 
 display = Matrix8x8(spi, cs, 4)
 display.brightness(0)
@@ -179,7 +179,7 @@ pcf0count = int(0)
 p13 = int(0)
 lext = int(0)
 tofd = int(0)
-sof = int(-90)
+sof = int(-60)
 
 volt = 0
 amp = 0
@@ -335,28 +335,6 @@ def download_in_chunks(url, chunk_size=512):
         finally:
             response.close()
 
-def suntimes(offset):
-    doy = localtime()[7]
-    
-    t1 = mktime((year,3,(31-(int(5*year/4+4))%7),1,0,0,0,0))
-    t2 = mktime((year,10,(31-(int(5*year/4+1))%7),1,0,0,0,0))
-    t = mktime(localtime())
-    
-    if t >= t1 and t < t2:
-        sunoffset = 120
-    else:
-        sunoffset = 60
-        
-    risemin = sunoffset + offset + 276.178 + 136.278 * cos(2 * 3.14151 * (doy + 7.05) / 365)
-    setmin = sunoffset - offset +  1013.816 - 139.61 * cos(2 * 3.14159 * (doy + 13.084) / 365)
-    
-    rtime = mktime((year, month , mday, int(risemin/60), int(risemin - int(risemin/60) * 60), 0, 0, 0))
-    stime = mktime((year, month , mday, int(setmin/60), int(setmin - int(setmin/60) * 60), 0, 0, 0))
-    if t > rtime and t < stime:
-        return True
-    else:
-        return False
-
 def tick(timer):
 
     global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd, sof
@@ -464,12 +442,10 @@ def tick(timer):
 
         if not mm % 12:
             p13 = chkping('10.0.0.13')
-            tofd = suntimes(sof)
+            tofd = suntime(year, month, mday, sof)
             if not pws and tofd and ssa:
-                pws = not pws
                 schedule(switch_solar, 0)
             if pws and not tofd and ssa:
-                pws = not pws
                 schedule(switch_solar, 0)
         
     if hh == 23 and mm == 59 and ss > 57:
@@ -879,7 +855,7 @@ if wdten: wdt = WDT(timeout=8001)
 lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
 rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
-tofd = suntimes(sof)
+tofd = suntime(year, month, mday, sof)
 
 if pws:
     data = safe_get("http://10.0.0.8:8099/solar1", timeout=3)
