@@ -1,4 +1,6 @@
-#--version0.971_240225--    
+#--version0.972_240225--    
+DEBUG = True
+
 from machine import Pin
 
 def fwrite(valstr):
@@ -17,10 +19,10 @@ if not rstate:
 else:
     fwrite('0')
     
-_PASSWD = const('zp987-')
+#_PASSWD = const('zp987-')
 #url = const('https://onedrive.live.com/download?cid=7A40866E01A106BA&resid=7A40866E01A106BA%21137441&authkey=AN0DlSOfEB27VcE')
-_URL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/cat/main.py')
-_CTRL_STR1 = const('#--version')
+#_URL = const('https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/cat/main.py')
+#_CTRL_STR1 = const('#--version')
 
 _STRINGS = const(("""<!DOCTYPE html>
 <html>
@@ -35,7 +37,7 @@ _STRINGS = const(("""<!DOCTYPE html>
 ""","""<form action="%s">
     <input type="submit" value="RESET" />
 </form>
-""","Wiatrak-holender1","klumpioky03"))
+""","Wiatrak-holender1","klumpioky03", "zp987-", "https://raw.githubusercontent.com/mareksaw-cg/remote_upgrade/main/cat/main.py", "#--version"))
 
 from machine import I2C, Timer, RTC
 from network import WLAN, STA_IF
@@ -50,10 +52,8 @@ i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
 i2c1 = I2C(1, sda=Pin(14), scl=Pin(15), freq=400000)
 
 bmesup = Pin(13, Pin.OUT, value=1)
-#bmesup.on()
 pir = Pin(28, Pin.IN)
 led = Pin('LED', Pin.OUT, value=1)
-#led.on()
 modpin = Pin(16, Pin.OUT)
 p20 = Pin(20, Pin.IN, Pin.PULL_UP)
 p21 = Pin(21, Pin.IN, Pin.PULL_UP)
@@ -80,11 +80,7 @@ bme280 = BME280(i2c=i2c1)
 wlan = WLAN(STA_IF)
 wlan.active(True)
 wlan.connect(_STRINGS[3], _STRINGS[4])
-'''
-if lcd:
-    display.text('WLAN aktywny', 0, 10, 1)
-    display.show()
-'''
+
 import ntptimerp3 as ntptimem
 #from neopixel import NeoPixel
 from os import rename, remove
@@ -154,7 +150,7 @@ def p21_int(Pin):
     p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 '''
 def chkping(url):
-    print('ping ' + url)
+    debug_print('ping ' + url)
     return ping(url, count=1, timeout=350, quiet=True)[1]
 
 def download_in_chunks(url, chunk_size=512):
@@ -184,32 +180,41 @@ def download_in_chunks(url, chunk_size=512):
         finally:
             response.close()
 
+def safe_get(url, timeout=3):
+    try:
+        r = get(url, timeout=timeout)
+        data = r.content
+        r.close()
+        return data
+    except Exception as e:
+        debug_print("Network error for", url, ":", e)
+        return None
+
+def debug_print(*args, **kwargs):
+    if DEBUG: print(*args, **kwargs)
+
 def connect():
     global solarip, wifi
     if lcd: display.fill(0)
-    wtext = 'WLAN'
     if not wlan.active(): wlan.active(True)
     if not wlan.isconnected(): wlan.connect(_STRINGS[3], _STRINGS[4])
     for n in range(6):
         if wlan.isconnected():
-            print('ifconf:', wlan.ifconfig())
-            ip = wlan.ifconfig()[0]
+            cfg = wlan.ifconfig()
+            ip = cfg[0]
             if lcd:
                 display.text('WLAN OK', 0, 0, 1)
                 display.text('IP: ' + ip, 0, 20, 1)
                 display.show()
             wifi = True
-            if ip == '10.0.0.56':
-                solarip = '10.0.0.36:1411'
-            else:
-                solarip = '46.187.185.38:1411'
+            solarip = '10.0.0.36:1411' if ip == '10.0.0.56' else '46.187.185.38:1411'
+            print('ifconf:', cfg)
             print('SOLARIP= ' + solarip)
             break
         print('connecting...')
         if lcd:
-            display.text(wtext, 0, 0, 1)
+            display.text('WLAN' + '.' * n, 0, 0, 1)
             display.show()
-            wtext += '.'
         sleep(4)
     else:
         wlan.active(False)
@@ -222,7 +227,7 @@ def connect():
         sleep(5)
     
 def getntp():
-    print('getntp')
+    debug_print('getntp')
     global ntpok
     ntpok = False
     if wlan.isconnected():
@@ -233,36 +238,27 @@ def get_solar1():
     global getdata
     getdata = False
     if wlan.isconnected():
-        try:
-            print(p, t)
-            r = get("http://" + solarip + "/parameters?" + str(t) + ";" + str(p) + ';' + str(roupin.value()) + ';' + str(modpin.value()), timeout=2)
-            data = r.content
-            r.close()
-            print('Data sent!')
+        debug_print(p, t)
+        data = safe_get("http://" + solarip + "/parameters?" + str(t) + ";" + str(p) + ';' + str(roupin.value()) + ';' + str(modpin.value()), timeout=2)
+        debug_print('Data sent!')
+        if data is not None:
             getdata = True
-            print('Solar OK')
-            print(data)
+            debug_print('Solar OK', data)
             return data            
-        except:
-            try:
-                r.close()
-            except:
-                pass
-            print('Data ERROR')
+        else:
+            debug_print('Data ERROR')
             return b''
-    else:
-        return b''
 
 def ch_conn(timer):
     if not wlan.isconnected():
         if not wlan.active(): wlan.active(True)
         if wifi:
             wlan.connect(_STRINGS[3], _STRINGS[4])
-            print('Ponowne laczenie!')
+            debug_print('Ponowne laczenie!')
         else:
             connect()
     else:
-        print('WLAN OK!')
+        debug_print('WLAN OK!')
     
 def draw_minus(x=0, scale=1):
     display.fill_rect(x, 24 // scale, 18 // scale, 8 // scale, 1)
@@ -332,11 +328,10 @@ def tick(timer):
     hh = '0' + str(hour) if hour < 10 else str(hour)
     mm = '0' + str(minute) if minute < 10 else str(minute)
     
-    print(lcdcount, lcdon, modovr1, rouovr1)
-    
+    debug_print(lcdcount, lcdon, modovr1, rouovr1)
+    '''
     if second == 0:
         collect()
-        '''
         print(mem_free())
         if hour < 7 or hour > 21:
             np[0] = (npval, npval, npval)
@@ -344,11 +339,11 @@ def tick(timer):
         else:
             np[0] = (0, 0, 0)
             np.write()
-        '''    
+    '''    
         
     if run1 or not second % 20:
 
-        print('Pomiar...')
+        debug_print('Pomiar...')
         t = round(float(bme280.temperature[:-1]), 1)
         h = int(float(bme280.humidity[:-1]))
         p = round(float(bme280.pressure[:-3]), 1)
@@ -378,7 +373,7 @@ def tick(timer):
             glk1 = True if glk == 'True' else False
             nlk1 = True if nlk == 'True' else False
             rouovr1 = True if rouovr == 'True' else False
-            print(svolt, samp, bvolt, bamp, modovr1, rouovr1, glk1, nlk1, chp)
+            debug_print(svolt, samp, bvolt, bamp, modovr1, rouovr1, glk1, nlk1, chp)
             servok = True
             nokcount = 4
             ucc = 0
@@ -393,13 +388,13 @@ def tick(timer):
                     elif router and avcur > 800 and bamp < refcur:
                         if not modem: modem = 1
                             
-                print(frapow, avcur, refcur)
+                debug_print(frapow, avcur, refcur)
 
             if bamp > refcur and modem and router: modem = 0                
             elif bamp > refcur and router and not modem: router = 0
             
         else:
-            print('get error')
+            debug_print('get error')
             nokcount -= 1
             ucc += 1
             if ucc > 65:
@@ -491,6 +486,7 @@ def tick(timer):
     if lcd: display.show()
     
     if not minute % 15 and not second:
+        collect()
         getntp()
     
     if not pir.value():
@@ -543,7 +539,7 @@ async def index(request, response):
 async def index(request, response):
     global modovr1
     modovr1 = not modovr1
-    print(modovr1)
+    debug_print(modovr1)
     respstr = 'OK1' if modovr1 else 'OK0'
     await response.start_html()
     await response.send(_STRINGS[0] % respstr)
@@ -559,7 +555,7 @@ async def index(request, response):
 async def index(request, response):
     global rouovr1
     rouovr1 = not rouovr1
-    print(rouovr1)
+    debug_print(rouovr1)
     respstr = 'OK1' if rouovr1 else 'OK0'
     await response.start_html()
     await response.send(_STRINGS[0] % respstr)
@@ -611,24 +607,24 @@ async def index(request, response):
     
 @app.route('/upgrade')
 async def index(request, response):
-    print('upgrade')
+    debug_print('upgrade')
     tim.deinit()
     tim1.deinit()
     collect()
     await response.start_html()
     qs1 = request.query_string.decode('utf-8').split('=')[1]
-    if qs1 == _PASSWD:
-        print('passok')
+    if qs1 == _STRINGS[5]:
+        debug_print('passok')
         await response.send(_STRINGS[0] % 'downloading...')
         with open("_main.py", "wb") as f:
-            print('start')
-            for data_chunk in download_in_chunks(_URL):
-                if data_chunk.startswith(_CTRL_STR1): init_str = True    
+            debug_print('start')
+            for data_chunk in download_in_chunks(_STRINGS[6]):
+                if data_chunk.startswith(_STRINGS[7]): init_str = True    
                 f.write(data_chunk)
         await response.start_html()
         await response.send(_STRINGS[0] % ('downloaded...'))
         collect()
-        print('downloaded')
+        debug_print('downloaded')
         end_str = True
                 
         if init_str and end_str:
