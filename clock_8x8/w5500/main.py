@@ -1,4 +1,4 @@
-#--version0.999.5_100325--
+#--version0.999.5_140325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -220,6 +220,9 @@ def checksum(msg):
     for c in msg: v ^= ord(c)
     return v
 '''
+def scollect(arg):
+    collect()
+
 def safe_get(url, timeout=3):
     try:
         r = urequestsget(url, timeout=timeout)
@@ -421,7 +424,7 @@ def tick(timer):
             machine.reset()
 
     if ss == 5:
-        collect()
+        schedule(scollect, 0)
         debug_print('chk tv/backup/ntp')
         #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
         rping = chkping('10.0.0.95')
@@ -484,7 +487,7 @@ def tick(timer):
         
     if ss == 11 or ss == 41:
         if sau:
-            if not pws and volt > 19.3:
+            if not pws and volt > 19.35:
                 schedule(switch_solar, 0)
                 debug_print('solar on')
             if pws and amp2 > chp:
@@ -492,13 +495,13 @@ def tick(timer):
                 debug_print('solar off')
 
     if ss == 19 or ss == 49:        
-        if pau and volt > 18.26 and amp2 < 0:
+        if pau and volt > 18.46 and amp2 < 0:
                 chp = amp2 + 125
                 if chp > 0: chp = 0        
         
         schedule(get_pins, 0)
         
-        if not pcf0 and roupin and (modpin or nlk) and volt > 19.01:
+        if not pcf0 and roupin and (modpin or nlk) and volt > 19.21:
             pcf0count += 1
             if pcf0count == 3:
                 pcf0 = True
