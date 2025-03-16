@@ -438,7 +438,6 @@ def tick(timer):
             safe_get("http://10.0.0.8:8099/frstart", timeout=1)
             
         if not mm % 10:
-            tofd = suntime(year, month, mday, sof)
             schedule(scollect, 0)
             
         if mm and not mm % 11:
@@ -448,6 +447,7 @@ def tick(timer):
 
         if not mm % 12:
             p13 = chkping('10.0.0.13')
+            tofd = suntime(year, month, mday, sof)
             if not pws and tofd and ssa:
                 schedule(switch_solar, 0)
             if pws and not tofd and ssa:
