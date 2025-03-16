@@ -1,4 +1,4 @@
-#--version0.999.5_140325--
+#--version0.999.5_150325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -33,7 +33,7 @@ _STRINGS = const(("""<!DOCTYPE html>
 """, """<form action="%s">
     <input type="submit" value="RESET" />
 </form>
-""", """<form action="/chpwrite">
+""", """<form action="%s">
   <label for="chpval">VAL=&nbsp;</label>
   <input type="text" id="chpval" name="chpval">&nbsp;&nbsp;
   <input type="submit" value="USTAW">
@@ -410,11 +410,11 @@ def tick(timer):
                 if not chkping('8.8.8.8'):
                     reset_cat()
                     fileop('main.err', wr_error('CAT RESET NO PING AND MODOVR\n'), 'a')
-            
+        '''    
         if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
             reset_cat()
             fileop('main.err', wr_error('ROUTER RELAY ERROR\n'), 'a')
-            
+        '''    
         if amp == 0 and amp2 == 0:
             curcount += 1
         else:
@@ -424,7 +424,6 @@ def tick(timer):
             machine.reset()
 
     if ss == 5:
-        schedule(scollect, 0)
         debug_print('chk tv/backup/ntp')
         #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
         rping = chkping('10.0.0.95')
@@ -438,6 +437,10 @@ def tick(timer):
             frdisable = False
             safe_get("http://10.0.0.8:8099/frstart", timeout=1)
             
+        if not mm % 10:
+            tofd = suntime(year, month, mday, sof)
+            schedule(scollect, 0)
+            
         if mm and not mm % 11:
             display.init()
             fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)), 'w')
@@ -445,7 +448,6 @@ def tick(timer):
 
         if not mm % 12:
             p13 = chkping('10.0.0.13')
-            tofd = suntime(year, month, mday, sof)
             if not pws and tofd and ssa:
                 schedule(switch_solar, 0)
             if pws and not tofd and ssa:
@@ -756,7 +758,21 @@ async def index(request, response):
 @app.route('/chpset')
 async def index(request, response):
     await response.start_html()
-    await response.send(_STRINGS[1] % _STRINGS[4])
+    await response.send(_STRINGS[1] % _STRINGS[4] % 'chpwrite')
+    
+@app.route('/sofset')
+async def index(request, response):
+    global sof
+    await response.start_html()
+    qs1 = request.query_string.decode('utf-8')
+    qs1 = qs1.split('=')[1]
+    if qs1: sof = int(qs1)
+    await response.send(_STRINGS[1] % 'OK' + str(sof))
+    
+@app.route('/sofconf')
+async def index(request, response):
+    await response.start_html()
+    await response.send(_STRINGS[1] % _STRINGS[4] % 'sofset')
     
 @app.route('/signal')
 async def index(request, response):
