@@ -1,4 +1,4 @@
-#--version0.999.5_150325--
+#--version1.000.5_150325--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -192,10 +192,10 @@ result_str = 'GENERAL ERROR'
 proceed = False
 
 f = open('backup.dat')
-enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa = [int(i) for i in f.read().split(';')]
+enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa, rouovr, sof = [int(i) for i in f.read().split(';')]
 f.close()
 
-print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa)
+print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa, rouovr, sof)
 
 collect()
 
@@ -442,7 +442,7 @@ def tick(timer):
             
         if mm and not mm % 11:
             display.init()
-            fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)), 'w')
+            fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)) + ';' + str(int(rouovr)) + ';' + str(int(sof)), 'w')
             schedule(getntp1, 0)
 
         if not mm % 12:
@@ -466,7 +466,7 @@ def tick(timer):
         outday = 0
         chp = -800
         tvmins = 0
-        fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)), 'w')
+        fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)) + ';' + str(int(rouovr)) + ';' + str(int(sof)), 'w')
         
     if not ss % 15:
         try:
