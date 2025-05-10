@@ -1,7 +1,8 @@
-#--version0.972_130325--    
-DEBUG = True
+#--version0.973_100525--    
+DEBUG = False
 
 from machine import Pin
+from micropython import const, schedule
 
 def fwrite(valstr):
     f = open('rstate.dat', 'w')
@@ -18,6 +19,13 @@ if not rstate:
     roupin.value(1)
 else:
     fwrite('0')
+    
+try:
+    f = open('main.py', 'r')
+    line1 = f.readline().split('--')[1][7:]
+    f.close()
+except:
+    line1 = 'error'
     
 #_PASSWD = const('zp987-')
 #url = const('https://onedrive.live.com/download?cid=7A40866E01A106BA&resid=7A40866E01A106BA%21137441&authkey=AN0DlSOfEB27VcE')
@@ -46,7 +54,7 @@ from urequests import get
 from gc import collect, mem_free
 from sh1106 import SH1106_I2C
 from bme280 import BME280
-from time import sleep
+from time import sleep, ticks_ms
 
 i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
 i2c1 = I2C(1, sda=Pin(14), scl=Pin(15), freq=400000)
@@ -120,6 +128,7 @@ avcur = 0
 chp = int(0)
 lrst = 'RESTART'
 result_str = 'GENERAL ERROR'
+loopt = int(0)
 
 collect()
 '''
@@ -226,7 +235,7 @@ def connect():
             display.show()
         sleep(5)
     
-def getntp():
+def getntp(arg):
     debug_print('getntp')
     global ntpok
     ntpok = False
@@ -234,6 +243,9 @@ def getntp():
         if ntptimem.settime():
             ntpok = True
    
+def excollect(arg):
+    collect()
+
 def get_solar1():
     global getdata
     getdata = False
@@ -321,7 +333,9 @@ def show_heart(x, y):
     
 def tick(timer):
     
-    global run1, lcdon, lcdcount, dec, uni, fra, t, h, p, dech, unih, frapow, avcur, servok, router, modem, svolt, bvolt, samp, bamp, nokcount, modovr1, rouovr1, glk1, nlk1, ucc, modpin, roupin, chp
+    global run1, lcdon, lcdcount, dec, uni, fra, t, h, p, dech, unih, frapow, avcur, servok, router, modem, svolt, bvolt, samp, bamp, nokcount, modovr1, rouovr1, glk1, nlk1, ucc, modpin, roupin, chp, loopt
+    
+    t01 = ticks_ms()
     
     (year, month, mday, wday, hour, minute, second, msecs) = rtc.datetime()
     
@@ -341,7 +355,7 @@ def tick(timer):
             np.write()
     '''    
         
-    if run1 or not second % 20:
+    if run1 or not second % 30:
 
         debug_print('Pomiar...')
         t = round(float(bme280.temperature[:-1]), 1)
@@ -486,8 +500,8 @@ def tick(timer):
     if lcd: display.show()
     
     if not minute % 15 and not second:
-        collect()
-        getntp()
+        schedule(collect, 0)
+        schedule(getntp, 0)
     
     if not pir.value():
         lcdcount += 1
@@ -502,10 +516,13 @@ def tick(timer):
         lcdcount = 0
     if pir.value() and lcdon:
         lcdcount = 0
-        
+    
+    loopt = ticks_ms() - t01
+    # Koniec petli zegara
+    
 connect()
 sleep(1)
-getntp()
+schedule(getntp, 0)
 sleep(2)
 tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 tim1.init(freq=0.015, mode=Timer.PERIODIC, callback=ch_conn)
@@ -521,7 +538,7 @@ app = webserver()
 @app.route('/')
 async def index(request, response):
     await response.start_html()
-    await response.send(_STRINGS[0] % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
+    await response.send(_STRINGS[0] % ('FIRMWARE: ' + line1 + '<br>' + str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br>LOOP EX TIME: ' + str(loopt) + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
 
 @app.route('/params')
 async def index(request, response):
@@ -591,6 +608,13 @@ async def index(request, response):
     #if not rouovr1: roupin.value(0)
     respstr = 'OK ' + 'M=' + str(modem) + ' R=' + str(router)
     await response.send(_STRINGS[0] % respstr)
+
+@app.route('/modemon')
+async def index(request, response):
+    global modem
+    modem = 1
+    await response.start_html()
+    await response.send(_STRINGS[0] % 'OK MODEM ON')
 
 @app.route('/msolaroff')
 async def index(request, response):
