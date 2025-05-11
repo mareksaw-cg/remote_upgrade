@@ -538,7 +538,7 @@ app = webserver()
 @app.route('/')
 async def index(request, response):
     await response.start_html()
-    await response.send(_STRINGS[0] % ('FIRMWARE: ' + line1 + '<br>' + str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br>LOOP EX TIME: ' + str(loopt) + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a>'))
+    await response.send(_STRINGS[0] % (str(t) + ';' + str(p) + '<br>' + 'MEM:' + str(mem_free()) + ';<br>ROUPIN: ' + str(roupin.value()) + ' MODPIN: '  + str(modpin.value()) + ';<br>ROUOVR: ' + str(rouovr1) + ' MODOVR: '  + str(modovr1) + ';<br>AVCUR: ' + str(avcur) + ' BAMP: '  + str(bamp) + ';<br>LAST RESTART: ' + lrst + ';<br>LOOP EX TIME: ' + str(loopt) + ';<br><a href="resetconf">RESTART</a>;<br><a href="upgradeconf">UPGRADE</a><br>FIRMWARE: ' + line1))
 
 @app.route('/params')
 async def index(request, response):
