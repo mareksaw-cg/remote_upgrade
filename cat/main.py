@@ -404,7 +404,7 @@ def tick(timer):
                             
                 debug_print(frapow, avcur, refcur)
 
-            if bamp > refcur and modem and router: modem = 0                
+            if bamp > refcur and modem: modem = 0                
             elif bamp > refcur and router and not modem: router = 0
             
         else:
