@@ -1,4 +1,4 @@
-#--version0.973_100525--    
+#--version0.974_180525--    
 DEBUG = False
 
 from machine import Pin
