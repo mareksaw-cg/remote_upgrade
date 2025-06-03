@@ -15,24 +15,27 @@ def load_entries(entries_path):
             parts = re.split(r"\s+", line)
             if len(parts) < 2:
                 continue
-            name = parts[0]         # e.g. "=GetTime++"
-            hexcode = parts[1]      # e.g. "#012B9"
+            name = parts[0]         # e.g. "=POP#"
+            hexcode = parts[1]      # e.g. "#01234"
             mapping[name] = hexcode
     return mapping
 
 def replace_in_source(source_path, entries_path, output_path):
     """
     Read source_path, replace every literal "=NAME" (keys of mapping)
-    with "#HEX", and write to output_path.
+    with "#HEX", and write to output_path. Matches names exactly,
+    regardless of trailing '#' or other punctuation.
     """
     mapping = load_entries(entries_path)
     text = open(source_path, "r", encoding="utf-8").read()
 
     if mapping:
-        # Sort keys by length descending to avoid partial‐match issues
+        # Sort keys by length desc so longer names like "=POP#" match
         keys = sorted(mapping.keys(), key=len, reverse=True)
+        # Escape each key for literal regex matching
         escaped_keys = [re.escape(k) for k in keys]
-        combined = re.compile(r"(?:%s)\b" % "|".join(escaped_keys))
+        # Build a pattern that matches any of those literals, no \b
+        combined = re.compile(r"(" + "|".join(escaped_keys) + r")")
 
         def _repl(m):
             return mapping[m.group(0)]
