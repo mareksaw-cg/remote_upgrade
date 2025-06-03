@@ -33,7 +33,7 @@ set "tempO=%base%.tmp.o"
 set "finalO=%base%.o"
 
 REM 5. Preprocess source → tempA (replace =NAME with #HEX)
-python rpl28a.py "%source%" "%entries%" "%tempA%"
+python rpl28.py "%source%" "%entries%" "%tempA%"
 if errorlevel 1 (
   echo.
   echo *** Preprocessing failed.
