@@ -804,12 +804,15 @@ async def index(request, response):
 async def index(request, response):
     debug_print('parameters')
     global qs, rstcount, modpin, roupin
+    qso = qs
     qs = request.query_string.decode('utf-8')
     if qs != '':
         debug_print(qs)
         partemp = qs.split(';')
         roupin = bool(int(partemp[2]))
         modpin = bool(int(partemp[3]))
+    else:
+        qs = qso
     pstring = str(volt) + ';' + str(amp) + ';' + str(volt2) + ';' + str(amp2) + ';' + str(glk) + ';' + str(nlk) + ';' + str(chp) + ';' + str(rouovr) + ';' + str(pws) + ';OK'
     await response.start_html()
     await response.send(_STRINGS[1] % pstring)
