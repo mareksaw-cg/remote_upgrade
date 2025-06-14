@@ -1,4 +1,4 @@
-#--version1.001.5_100525--
+#--version1.002.5_140625--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -340,7 +340,7 @@ def download_in_chunks(url, chunk_size=512):
 
 def tick(timer):
 
-    global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd, sof
+    global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd, sof, rouovr
     lt1 = ticks_ms()
     wdt.feed()
     (year, month, mday, wday, hh, mm, ss, msecs) = rtc.datetime()
@@ -387,7 +387,7 @@ def tick(timer):
     
     debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
     
-    if volt2 < 12.6 and amp2 > 600 and modpin and not modovr:
+    if volt2 < 12.6 and amp2 > 600 and modpin:
         data = safe_get("http://10.0.0.56:1412/msolaroff", timeout=3)
         sleep(0.3)
         schedule(get_pins, 0)
@@ -468,7 +468,7 @@ def tick(timer):
         tvmins = 0
         fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)) + ';' + str(int(rouovr)) + ';' + str(int(sof)), 'w')
         
-    if not ss % 15:
+    if not ss % 20:
         try:
             lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
         except:
@@ -515,6 +515,12 @@ def tick(timer):
                 pcf0 = False
                 pcf.pin(0, pcf0)
             pcf0count = 0 if pcf0count < 0 else pcf0count
+
+        if rouovr and not roupin:
+            data = safe_get("http://10.0.0.56:1412/router", timeout=2)
+            if data is not None:
+                if 'OK1' in data: rouovr = True
+                if 'OK0' in data: rouovr = False
     
     flash(0.01)
     lext = ticks_ms() - lt1
@@ -804,7 +810,7 @@ async def index(request, response):
         partemp = qs.split(';')
         roupin = bool(int(partemp[2]))
         modpin = bool(int(partemp[3]))
-    pstring = str(volt) + ';' + str(amp) + ';' + str(volt2) + ';' + str(amp2) + ';' + str(glk) + ';' + str(nlk) + ';' + str(chp) + ';' + str(rouovr) + ';OK'
+    pstring = str(volt) + ';' + str(amp) + ';' + str(volt2) + ';' + str(amp2) + ';' + str(glk) + ';' + str(nlk) + ';' + str(chp) + ';' + str(rouovr) + ';' + str(pws) + ';OK'
     await response.start_html()
     await response.send(_STRINGS[1] % pstring)
     rstcount = 0
