@@ -1,4 +1,4 @@
-#--version0.974_180525--    
+#--version0.975_140625--    
 DEBUG = False
 
 from machine import Pin
@@ -527,7 +527,7 @@ sleep(2)
 tim.init(freq=1, mode=Timer.PERIODIC, callback=tick)
 tim1.init(freq=0.015, mode=Timer.PERIODIC, callback=ch_conn)
 (year, month, mday, wday, hour, minute, second, msecs) = rtc.datetime()
-lrst = str(mday) + '.' + str(month) + '.' + str(year) + ' ' +str(hour) + ':' +str(minute)
+lrst = str(mday) + '.' + str(month) + '.' + str(year) + ' ' + str(hour) + ':' + str(minute) + '.' + str(second)
 #p20.irq(trigger=Pin.IRQ_FALLING, handler=p20_int)
 #p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 
