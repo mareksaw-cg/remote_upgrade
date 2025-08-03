@@ -532,9 +532,11 @@ tloop = int(0)
 while not wlan.isconnected():
     print('waiting for lan')
     led.toggle()
-    sleep(1)
+    sleep(2)
     tloop += 1
-    if tloop > 60: machine.reset()
+    if tloop > 60:
+        fileop('main.err', wr_error('NO LAN AT START\n'), 'a')
+        machine.reset()
 
 #wifi = True
 print('ifconf:', wlan.ifconfig())
