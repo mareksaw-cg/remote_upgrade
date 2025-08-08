@@ -841,7 +841,7 @@ async def index(request, response):
 @app.route('/snowdata')
 async def index(request, response):
     await response.start_html()
-    data = tofd + ';' + qs.split(';')[1]
+    data = str(tofd) + ';' + qs.split(';')[1]
     await response.send(_STRINGS[1] % data)
     
 @app.route('/readsrcconf')
