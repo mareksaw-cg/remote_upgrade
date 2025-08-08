@@ -1,4 +1,4 @@
-#--version1.003.5_030825--
+#--version1.004.5_080825--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -187,6 +187,7 @@ volt2 = 0
 amp2 = 0
 qs = '0;0'
 clr = ''
+
 
 result_str = 'GENERAL ERROR'
 proceed = False
@@ -829,7 +830,18 @@ async def index(request, response):
 async def index(request, response):
     await response.start_html()
     data = reset_cat()
-    if 'OK' in data: await response.send(_STRINGS[1] % 'OK')    
+    if 'OK' in data: await response.send(_STRINGS[1] % 'OK')
+    
+@app.route('/tempds')
+async def index(request, response):
+    await response.start_html()
+    data = safe_get("http://10.0.0.8:8099/tempds", timeout=2)
+    if data: await response.send(_STRINGS[1] % data)
+    
+@app.route('/snowdata')
+async def index(request, response):
+    await response.start_html()
+    await response.send(_STRINGS[1] % (qs.split(';')[1] + ';' + tofd))
     
 @app.route('/readsrcconf')
 async def index(request, response):
