@@ -1,4 +1,4 @@
-#--version1.004.5_080825--
+#--version1.005.5_200925--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -382,7 +382,7 @@ def tick(timer):
         amp2 = ina2.current()
         powa = volt2 * amp2
         if amp2 < 0:
-            outday += (0.7 * powa)
+            outday += (0.725 * powa)
         else:
             outday += powa        
     
@@ -466,6 +466,7 @@ def tick(timer):
         enday = 0
         outday = 0
         chp = -800
+        if not pau: pau = True
         tvmins = 0
         fileop('backup.dat', str(int(enday)) + ';' + str(int(outday)) + ';' + str(int(glk))  + ';' + str(int(nlk)) + ';' + str(int(pws)) + ';' + str(int(chp)) + ';' + str(int(ch_en)) + ';' + str(int(sau)) + ';' + str(int(pau)) + ';' + str(int(tvmins)) + ';' + str(int(frdisable)) + ';' + str(int(pcf0)) + ';' + str(int(ssa)) + ';' + str(int(rouovr)) + ';' + str(int(sof)), 'w')
         
