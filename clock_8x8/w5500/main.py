@@ -1,4 +1,4 @@
-#--version1.006.5_250925--
+#--version1.007.5_250925--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -86,6 +86,7 @@ if 64 in i2cscan or 69 in i2cscan:
             ina.configure()
             print('INA OK')
     except:
+        ina = None
         print('INA ERROR')
     try:
         if 69 in i2cscan:
@@ -93,6 +94,7 @@ if 64 in i2cscan or 69 in i2cscan:
             ina2.configure()
             print('INA2 OK')        
     except:
+        ina2 = None
         print('INA2 ERROR')
         
 else:
@@ -181,6 +183,7 @@ volt = 0
 amp = 0
 volt2 = 0
 amp2 = 0
+lastamp2 = 0
 qs = '0;0'
 clr = ''
 
@@ -338,7 +341,7 @@ def download_in_chunks(url, chunk_size=512):
 
 def tick(timer):
 
-    global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd, sof, rouovr
+    global year, month, mday, hh, mm, ss, volt2, amp2, volt, amp, chp, lcdon, lcdcount, enday, outday, lux, lmove, pcf0, pcf0count, pws, sau, pau, rstcount, tvmins, curcount, frdisable, rping, p13, lext, tofd, sof, rouovr, lastamp2
     lt1 = ticks_ms()
     wdt.feed()
     (year, month, mday, wday, hh, mm, ss, msecs) = rtc.datetime()
@@ -368,15 +371,21 @@ def tick(timer):
     '''
     Pomiar energii
     '''
-    if ina and ina2:
+    if ina:
         #PARAMETRY SOLAR
         volt = round(ina.supply_voltage(), 2)
         amp = ina.current()
         pows = volt * amp
         enday += pows
+    if ina2:
         #PARAMETRY AKU
         volt2 = round(ina2.supply_voltage(), 2)
         amp2 = ina2.current()
+        if amp2 == lastamp2:
+            curcount += 1
+        else:
+            curcount = 0
+        lastamp2 = amp2
         powa = volt2 * amp2
         if amp2 < 0:
             outday += (0.725 * powa)
@@ -422,7 +431,11 @@ def tick(timer):
         else:
             curcount = 0
         if curcount > 5:
-            fileop('main.err', wr_error('INA reading zeros\n'), 'a')
+            fileop('main.err', wr_error('INA reading zeros or amp2 error\n'), 'a')
+            ina.reset()
+            ina2.reset()
+            ina.configure()
+            ina2.configure()
             machine.reset()
 
     if ss == 5:
