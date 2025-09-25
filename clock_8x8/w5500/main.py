@@ -415,6 +415,10 @@ def tick(timer):
         '''    
         if amp == 0 and amp2 == 0:
             curcount += 1
+            ina.reset()
+            ina2.reset()
+            ina.configure()
+            ina2.configure()
         else:
             curcount = 0
         if curcount > 5:
