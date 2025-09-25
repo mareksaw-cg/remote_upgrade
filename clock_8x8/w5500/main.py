@@ -1,4 +1,4 @@
-#--version1.005.5_200925--
+#--version1.006.5_250925--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -71,25 +71,29 @@ led = Pin(25, Pin.OUT, value=1)
 i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=400000)
 i2cscan = i2c.scan()
 
-inaok = False
-ina2ok = False
+ina = None
+ina2 = None
+pcf = None
+bh = None
+lcddisplay = None
 
 if 64 in i2cscan or 69 in i2cscan:
+    collect()
+    from ina219l import INA219
     try:
-        collect()
-        from ina219l import INA219
         if 64 in i2cscan:
             ina = INA219(0.1, i2c, 3.1, 0x40)
-            inaok = True
             ina.configure()
             print('INA OK')
+    except:
+        print('INA ERROR')
+    try:
         if 69 in i2cscan:
             ina2 = INA219(0.1, i2c, 3.1, 0x45)
-            ina2ok = True
             ina2.configure()
             print('INA2 OK')        
     except:
-        print('can not import ina219')
+        print('INA2 ERROR')
         
 else:
     print('no INA219')
@@ -100,13 +104,10 @@ if 56 in i2cscan:
         from pcf8574 import PCF8574
         pcf = PCF8574(i2c, 0x38)
         print('pcf ok')
-        pcfok = True
     except:
         print('pcf error')
-        pcfok = False
 else:
-    print('no pcf')
-    pcfok = False    
+    print('no pcf') 
     
 if 35 in i2cscan:
     try:
@@ -115,13 +116,10 @@ if 35 in i2cscan:
         print('bh ok')
         bh = BH1750(i2c)
         bh.set_mode(BH1750.CONT_LOWRES)
-        bhok = True
     except:
         print('bh1750 error')
-        bhok = False
 else:
     print('no bh')
-    bhok = False
     
 if 60 in i2cscan:
     collect()
@@ -131,15 +129,13 @@ if 60 in i2cscan:
         lcddisplay.rotate(1)
         lcddisplay.fill(0)
         lcddisplay.text('Boot OK', 0, 0, 1)
-        if inaok and ina2ok: lcddisplay.text('INA OK', 0, 10, 1)
+        if ina and ina2: lcddisplay.text('INA OK', 0, 10, 1)
         lcddisplay.show()
-        lcd = True
         print('LCD OK')
     except:
-        lcd = False
+        print('LCD ERROR')
 else:
     print('no lcd')
-    lcd = False
     
 collect()
 
@@ -197,6 +193,7 @@ enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa
 f.close()
 
 print(enday, outday, glk, nlk, pws, chp, ch_en, sau, pau, tvmins, frdisable, pcf0, ssa, rouovr, sof)
+if pcf: pcf.pin(0, pcf0)
 
 collect()
 
@@ -356,7 +353,7 @@ def tick(timer):
                 lcdon = False
                 display.off()
                 debug_print('disp off')
-                if lcd: lcddisplay.poweroff()
+                if lcddisplay: lcddisplay.poweroff()
     else:
         lmove = str(hh) + ':' + str(mm)
         lcdcount = 0
@@ -364,14 +361,14 @@ def tick(timer):
             lcdon = True
             display.init()
             debug_print('disp on')
-            if lcd: lcddisplay.poweron()
+            if lcddisplay: lcddisplay.poweron()
     
     show8x8(hh, mm, ss, ntpok)
     
     '''
     Pomiar energii
     '''
-    if inaok and ina2ok:
+    if ina and ina2:
         #PARAMETRY SOLAR
         volt = round(ina.supply_voltage(), 2)
         amp = ina.current()
@@ -460,7 +457,7 @@ def tick(timer):
         ina2.reset()
         ina.configure()
         ina2.configure()
-        if bhok:
+        if bh:
             bh.off()
             bh.reset()
         enday = 0
@@ -472,14 +469,14 @@ def tick(timer):
         
     if not ss % 20:
         try:
-            lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
+            lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bh else 0
         except:
             lux = 200
         bright = 15 if lux // 250 > 15 else lux // 250
         if lcdon: display.brightness(bright)
                      
     if not ss % 2:
-        if lcd and lcdon:
+        if lcddisplay and lcdon:
             lcddisplay.fill(0)
             lcddisplay.text('L=' + str(lux) + 'lx W:' + str(wlan.isconnected()), 0, 0, 1)
             lcddisplay.text('U=' + str(volt) + 'V' + ' I=' + str(amp) + 'mA', 0, 12, 1)
@@ -907,7 +904,7 @@ async def index(request, response):
 
 if wdten: wdt = WDT(timeout=8001)
 
-lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bhok else 0
+lux = int(bh.luminance(BH1750.CONT_LOWRES)) if bh else 0
 rping = chkping('10.0.0.95')
 p13 = chkping('10.0.0.13')
 tofd = suntime(year, month, mday, sof)
