@@ -68,7 +68,7 @@ led = Pin(25, Pin.OUT, value=1)
 #tvin = Pin(9, Pin.IN, Pin.PULL_UP)
 #chr_en = Pin(5, Pin.OUT, value=0)
 
-i2c = I2C(0, scl=Pin(1), sda=Pin(0), freq=400000)
+i2c = I2C(0, scl=Pin(5), sda=Pin(4), freq=400000)
 i2cscan = i2c.scan()
 
 ina = None
