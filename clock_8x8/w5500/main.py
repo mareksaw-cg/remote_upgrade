@@ -1,4 +1,6 @@
 #--version1.008.5_260925--
+# UWAGA!!! Blok wejsc 0-3 prawdopodobnie uszkodzony!
+# UWAGA!!! Nie wierzyc AI w sprawach usuwania zaklocen itp.!
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -62,7 +64,7 @@ from machine import I2C, Pin
 from gc import collect, mem_free
 
 beeppin = Pin(28, Pin.OUT)
-pir = Pin(2, Pin.IN)
+pir = Pin(6, Pin.IN)
 led = Pin(25, Pin.OUT, value=1)
 #led = Pin(25 if lan else 'LED', Pin.OUT, value=1)
 #tvin = Pin(9, Pin.IN, Pin.PULL_UP)
@@ -386,10 +388,7 @@ def tick(timer):
     if ina2:
         #PARAMETRY AKU
         volt2 = round(ina2.supply_voltage(), 2)
-        try:
-            amp2 = ina2.current()
-        except:
-            amp2 = 0
+        amp2 = ina2.current()
         if amp2 == lastamp2:
             curcount += 1
         else:
