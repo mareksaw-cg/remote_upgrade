@@ -1,4 +1,4 @@
-#--version1.007.5_250925--
+#--version1.008.5_260925--
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
 # UWAGA!!! Sprawdz czy zapisujesz plik na urzadzeniu czy w OneDrive! Objaw - program dziala w Thonny a nie dziala po restarcie!
 
@@ -233,6 +233,12 @@ def safe_get(url, timeout=3):
     except Exception as e:
         debug_print("Network error for", url, ":", e)
         return None
+    
+def ina_reset(arg):
+    ina.reset()
+    ina2.reset()
+    ina.configure()
+    ina2.configure()
 
 def debug_print(*args, **kwargs):
     if DEBUG: print(*args, **kwargs)
@@ -392,7 +398,7 @@ def tick(timer):
         else:
             outday += powa        
     
-    debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable)
+    debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable, curcount)
     
     if volt2 < 12.6 and amp2 > 600 and modpin:
         data = safe_get("http://10.0.0.56:1412/msolaroff", timeout=3)
@@ -421,22 +427,23 @@ def tick(timer):
         if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
             reset_cat()
             fileop('main.err', wr_error('ROUTER RELAY ERROR\n'), 'a')
-        '''    
+            
         if amp == 0 and amp2 == 0:
             curcount += 1
-            ina.reset()
-            ina2.reset()
-            ina.configure()
-            ina2.configure()
+            schedule(ina_reset, 0)
         else:
             curcount = 0
         if curcount > 5:
             fileop('main.err', wr_error('INA reading zeros or amp2 error\n'), 'a')
-            ina.reset()
-            ina2.reset()
-            ina.configure()
-            ina2.configure()
             machine.reset()
+        '''
+    if ss == 3:
+        if curcount > 60:
+            fileop('main.err', wr_error('INA reading zeros or amp2 error\n'), 'a')
+            machine.reset()
+        if curcount > 40:
+            schedule(ina_reset, 0)
+            fileop('main.err', wr_error('INA amp2 error\n'), 'a')
 
     if ss == 5:
         debug_print('chk tv/backup/ntp')
@@ -469,11 +476,7 @@ def tick(timer):
                 schedule(switch_solar, 0)
         
     if hh == 23 and mm == 59 and ss > 57:
-        
-        ina.reset()
-        ina2.reset()
-        ina.configure()
-        ina2.configure()
+        schedule(ina_reset, 0)
         if bh:
             bh.off()
             bh.reset()
