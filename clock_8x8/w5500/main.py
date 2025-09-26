@@ -386,7 +386,10 @@ def tick(timer):
     if ina2:
         #PARAMETRY AKU
         volt2 = round(ina2.supply_voltage(), 2)
-        amp2 = ina2.current()
+        try:
+            amp2 = ina2.current()
+        except:
+            amp2 = 0
         if amp2 == lastamp2:
             curcount += 1
         else:
@@ -718,6 +721,7 @@ async def index(request, response):
 async def index(request, response):
     await response.start_html()
     await response.send(_STRINGS[1] % 'OK RESET')
+    schedule(ina_reset, 0)
     sleep(1)
     fileop('main.err', wr_error('RESET via web\n'), 'a')
     machine.reset()
