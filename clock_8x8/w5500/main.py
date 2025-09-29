@@ -1,4 +1,4 @@
-#--version1.008.5_260925--
+#--version1.009.5_290925--
 # UWAGA!!! Blok wejsc 0-3 prawdopodobnie uszkodzony!
 # UWAGA!!! Nie wierzyc AI w sprawach usuwania zaklocen itp.!
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
@@ -407,8 +407,7 @@ def tick(timer):
         sleep(0.3)
         schedule(get_pins, 0)
     
-    if ss == 0:
-        
+    if ss == 0:        
         rstcount += 1
         if rstcount == 10:
             app.shutdown()
@@ -425,39 +424,25 @@ def tick(timer):
                 if not chkping('8.8.8.8'):
                     reset_cat()
                     fileop('main.err', wr_error('CAT RESET NO PING AND MODOVR\n'), 'a')
-        '''    
-        if volt > 20.9 and ((pows - (int(pws) * 6000)) < abs(powa)):
-            reset_cat()
-            fileop('main.err', wr_error('ROUTER RELAY ERROR\n'), 'a')
-            
-        if amp == 0 and amp2 == 0:
-            curcount += 1
-            schedule(ina_reset, 0)
-        else:
-            curcount = 0
-        if curcount > 5:
-            fileop('main.err', wr_error('INA reading zeros or amp2 error\n'), 'a')
-            machine.reset()
-        '''
+
     if ss == 3:
+        if curcount == 40:
+            schedule(ina_reset, 0)
+            fileop('main.err', wr_error('INA amp2 error\n'), 'a')
         if curcount > 60:
             fileop('main.err', wr_error('INA reading zeros or amp2 error\n'), 'a')
             machine.reset()
-        if curcount > 40:
-            schedule(ina_reset, 0)
-            fileop('main.err', wr_error('INA amp2 error\n'), 'a')
 
     if ss == 5:
         debug_print('chk tv/backup/ntp')
         #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
-        rping = chkping('10.0.0.95')
-        if rping:
+        #rping = chkping('10.0.0.95')
+        if chkping('10.0.0.95'):
             tvmins += 1
             if not frdisable:
                 frdisable = True
                 safe_get("http://10.0.0.8:8099/frstop", timeout=1)
-
-        if not rping and frdisable:
+        elif frdisable:
             frdisable = False
             safe_get("http://10.0.0.8:8099/frstart", timeout=1)
             
