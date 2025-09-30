@@ -1,4 +1,4 @@
-#--version1.009.5_290925--
+#--version1.010.5_300925--
 # UWAGA!!! Blok wejsc 0-3 prawdopodobnie uszkodzony!
 # UWAGA!!! Nie wierzyc AI w sprawach usuwania zaklocen itp.!
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
@@ -436,8 +436,8 @@ def tick(timer):
     if ss == 5:
         debug_print('chk tv/backup/ntp')
         #rping = ping('10.0.0.95', count=1, timeout=400, quiet=True)[1]
-        #rping = chkping('10.0.0.95')
-        if chkping('10.0.0.95'):
+        rping = chkping('10.0.0.95')
+        if rping:
             tvmins += 1
             if not frdisable:
                 frdisable = True
