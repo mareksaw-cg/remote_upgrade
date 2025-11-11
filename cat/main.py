@@ -1,4 +1,4 @@
-#--version0.977_111125--    
+#--version0.978_111125--    
 DEBUG = False
 
 from machine import Pin
@@ -164,14 +164,14 @@ def p20_int(Pin):
     p20.irq(handler=None)
     chg = True
     neopin.on()
-    sleep(0.5)
+    sleep(0.3)
     p20.irq(trigger=Pin.IRQ_FALLING, handler=p20_int)
     
 def p21_int(Pin):
     p21.irq(handler=None)
     chg = False
     neopin.off()
-    sleep(0.5)
+    sleep(0.3)
     p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 
 def chkping(url):
@@ -509,7 +509,7 @@ def tick(timer):
         if servok: display.text('OK', 113, 34, 1)
         if modpin.value() == 1: display.text('MO', 113, 44, 1)
         if roupin.value() == 1: display.text('RT', 113, 54, 1)
-        if neopin.value() == 1: display.text('.', 126, 8, 1)
+        if neopin.value() == 1: display.text('C', 46, 46, 1)
 
     elif lcd:
         show_face(5)
