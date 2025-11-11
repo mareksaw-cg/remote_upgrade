@@ -65,7 +65,7 @@ led = Pin('LED', Pin.OUT, value=1)
 modpin = Pin(16, Pin.OUT)
 p20 = Pin(20, Pin.IN, Pin.PULL_UP)
 p21 = Pin(21, Pin.IN, Pin.PULL_UP)
-#chg = Pin(2, Pin.OUT)
+chg = False
 neopin = Pin(2, Pin.OUT, value=0)
 
 print(i2c.scan(), i2c1.scan())
@@ -162,12 +162,14 @@ def p21_int(Pin):
 
 def p20_int(Pin):
     p20.irq(handler=None)
+    chg = True
     neopin.on()
     sleep(1)
     p20.irq(trigger=Pin.IRQ_FALLING, handler=p20_int)
     
 def p21_int(Pin):
     p21.irq(handler=None)
+    chg = False
     neopin.off()
     sleep(1)
     p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
@@ -507,7 +509,7 @@ def tick(timer):
         if servok: display.text('OK', 113, 34, 1)
         if modpin.value() == 1: display.text('MO', 113, 44, 1)
         if roupin.value() == 1: display.text('RT', 113, 54, 1)
-        if neopin.value() == 1: display.text('.', 127, 8, 1)
+        if chg: display.text('.', 126, 8, 1)
 
     elif lcd:
         show_face(5)
