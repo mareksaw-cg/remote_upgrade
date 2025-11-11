@@ -1,4 +1,4 @@
-#--version0.978_111125--    
+#--version0.979_111125--    
 DEBUG = False
 
 from machine import Pin
@@ -161,16 +161,16 @@ def p21_int(Pin):
 '''
 
 def p20_int(Pin):
+    global chg
     p20.irq(handler=None)
     chg = True
-    neopin.on()
     sleep(0.3)
     p20.irq(trigger=Pin.IRQ_FALLING, handler=p20_int)
     
 def p21_int(Pin):
+    global chg
     p21.irq(handler=None)
     chg = False
-    neopin.off()
     sleep(0.3)
     p21.irq(trigger=Pin.IRQ_FALLING, handler=p21_int)
 
@@ -450,6 +450,9 @@ def tick(timer):
         modpin.value(modem or modovr1)
     else:
         roupin.value(router or rouovr1)
+        
+    if chg: neopin.on()
+    else: neopin.off()
     '''    
     if not glk1:
         if not nlk1:
@@ -591,6 +594,15 @@ async def index(request, response):
     rouovr1 = not rouovr1
     debug_print(rouovr1)
     respstr = 'OK1' if rouovr1 else 'OK0'
+    await response.start_html()
+    await response.send(_STRINGS[0] % respstr)
+    
+@app.route('/charge')
+async def index(request, response):
+    global chg
+    chg = not chg
+    debug_print(chg)
+    respstr = 'OK1' if chg else 'OK0'
     await response.start_html()
     await response.send(_STRINGS[0] % respstr)
    
