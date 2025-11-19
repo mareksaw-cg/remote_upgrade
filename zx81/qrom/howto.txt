@@ -1,0 +1,30 @@
+PROCEDURA TWORZENIA PLIKU TAŚMY O OKRESLONEJ DŁUGOŚCI:
+
+ 
+
+STWORZYĆ PLIK Z ZAWARTOŚCIĄ 1 REM X*ILOŚĆ BAJTÓW DOCELOWYCH (XXXXXXXXXX….) (TU 646*X)
+ZAPISAĆ JAKO DATA.BAS
+NARZĘDZIA SĄ NA PI_0_2W_NOWY
+WYKONAĆ ZAMIANĘ NA PLIK .P zmakebas -p 646b.bas
+POBRAĆ PRZETWORZONY PLIK OUT.P
+PLIK OUT.P OTWORZYĆ W EDYTORZE HEX (HxD)
+ZLOKALIZOWAĆ GRUPĘ BAJTÓW XXXXXX
+SKOPIOWAĆ BAJTY DOCELOWE Z DATA.BIN
+WKLEIĆ W ZAZNACZONĄ GRUPĘ W OUT.P
+ZAPISAĆ
+ZAMIENIĆ NA WAV ZX81 TAPE CONVERTER
+ 
+
+NARZĘDZIA ZX81:
+
+ 
+
+ZMAKEBAS: https://github.com/ryangray/zmakebas.git
+
+ 
+
+ZX81-UTILS: https://github.com/ryangray/zx81-utils.git  > ryangray/zx81-utils: Several utilities for ZX81 emulator .P files with some crossing over to Spectrum emulator .tap files.
+
+ 
+
+Najpierw zainstalować ZMAKEBAS (make, sudo make install), potem zx81-utils
