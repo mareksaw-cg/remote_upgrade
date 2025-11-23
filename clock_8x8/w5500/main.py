@@ -1,4 +1,4 @@
-#--version1.010.5_300925--
+#--version1.011.5_231125--
 # UWAGA!!! Blok wejsc 0-3 prawdopodobnie uszkodzony!
 # UWAGA!!! Nie wierzyc AI w sprawach usuwania zaklocen itp.!
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
@@ -180,6 +180,7 @@ p13 = int(0)
 lext = int(0)
 tofd = int(0)
 sof = int(-60)
+chg = False
 
 volt = 0
 amp = 0
@@ -188,7 +189,6 @@ amp2 = 0
 lastamp2 = 0
 qs = '0;0'
 clr = ''
-
 
 result_str = 'GENERAL ERROR'
 proceed = False
@@ -580,7 +580,7 @@ async def index(request, response):
     debug_print('serwer')
     global rstcount
     await response.start_html()
-    rows = ['<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('PVM', volt, amp), '<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('BAT', volt2, amp2), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('EN+', round(enday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('EN-', round(outday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POW', round((volt * amp / 1000), 1)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POB', round((volt2 * amp2 / 1000), 1)), '<tr><td><a href="modemconf">%s</a></td><td>%s</td><td><a href="modemonconf">%s</a></td></tr>' % ('MOV', str(modovr), 'MON'), '<tr><td><a href="routerconf">%s</a></td><td colspan="2">%s</td></tr>' % ('ROV', str(rouovr)), '<tr><td><a href="glockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('GLK', str(glk)), '<tr><td><a href="nlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MLK', str(nlk)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('QST', qs), '<tr><td><a href="pwrswconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PWS', str(pws)), '<tr><td><a href="solautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SAU', str(sau)), '<tr><td><a href="ssaconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SSA', str(ssa)), '<tr><td><a href="sofconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SOF', str(sof)), '<tr><td><a href="chpset">%s</a></td><td colspan="2">%s</td></tr>' % ('CHP', str(chp)), '<tr><td><a href="priautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PAU', (str(pau))),'<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TON', str(rping)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TVT', str(tvmins)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FRD', str(frdisable)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('P13', str(p13)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LUX', str(lux)),  '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LMV', lmove), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('DAY', str(tofd)), '<tr><td><a href="pcf0conf">%s</a></td><td colspan="2">%s</td></tr>' % ('PC0', str(pcf0)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('PIN', str(roupin) + ';' + str(modpin)), '<tr><td><a href="resetconf">%s</a></td><td colspan="2">%s</td></tr>' % ('LRS', (rsttime + ';' + str(rstcount))), '<tr><td><a href="catreset">%s</a></td><td colspan="2">%s</td></tr>' % ('CLR', clr), '<tr><td><a href="upgradeconf">%s</a></td><td colspan="2">%s</td></tr>' % ('FWU', line1), '<tr><td>%s</td><td colspan="2"><a href="readsrc">%s</a></td></tr>' % ('SRC', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="readerrconf">%s</a></td></tr>' % ('ERR', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="alert">%s</a></td></tr>' % ('ALM', 'START'), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('MEM', str(mem_free())), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LET', str(lext)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LDT', str(hh) + ':' + str(mm) + ' ' + str(ss))]
+    rows = ['<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('PVM', volt, amp), '<tr><td>%s</td><td>%s</td><td>%d</td></tr>' % ('BAT', volt2, amp2), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('EN+', round(enday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('EN-', round(outday / 3600000, 3)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POW', round((volt * amp / 1000), 1)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('POB', round((volt2 * amp2 / 1000), 1)), '<tr><td><a href="modemconf">%s</a></td><td>%s</td><td><a href="modemonconf">%s</a></td></tr>' % ('MOV', str(modovr), 'MON'), '<tr><td><a href="routerconf">%s</a></td><td colspan="2">%s</td></tr>' % ('ROV', str(rouovr)), '<tr><td><a href="glockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('GLK', str(glk)), '<tr><td><a href="nlockconf">%s</a></td><td colspan="2">%s</td></tr>' % ('MLK', str(nlk)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('QST', qs), '<tr><td><a href="pwrswconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PWS', str(pws)), '<tr><td><a href="solautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SAU', str(sau)), '<tr><td><a href="ssaconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SSA', str(ssa)), '<tr><td><a href="sofconf">%s</a></td><td colspan="2">%s</td></tr>' % ('SOF', str(sof)), '<tr><td><a href="chpset">%s</a></td><td colspan="2">%s</td></tr>' % ('CHP', str(chp)), '<tr><td><a href="priautconf">%s</a></td><td colspan="2">%s</td></tr>' % ('PAU', (str(pau))), '<tr><td><a href="chgconf">%s</a></td><td colspan="2">%s</td></tr>' % ('CHG', (str(chg))), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TON', str(rping)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('TVT', str(tvmins)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('FRD', str(frdisable)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('P13', str(p13)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LUX', str(lux)),  '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LMV', lmove), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('DAY', str(tofd)), '<tr><td><a href="pcf0conf">%s</a></td><td colspan="2">%s</td></tr>' % ('PC0', str(pcf0)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('PIN', str(roupin) + ';' + str(modpin)), '<tr><td><a href="resetconf">%s</a></td><td colspan="2">%s</td></tr>' % ('LRS', (rsttime + ';' + str(rstcount))), '<tr><td><a href="catreset">%s</a></td><td colspan="2">%s</td></tr>' % ('CLR', clr), '<tr><td><a href="upgradeconf">%s</a></td><td colspan="2">%s</td></tr>' % ('FWU', line1), '<tr><td>%s</td><td colspan="2"><a href="readsrc">%s</a></td></tr>' % ('SRC', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="readerrconf">%s</a></td></tr>' % ('ERR', 'READ'), '<tr><td>%s</td><td colspan="2"><a href="alert">%s</a></td></tr>' % ('ALM', 'START'), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('MEM', str(mem_free())), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LET', str(lext)), '<tr><td>%s</td><td colspan="2">%s</td></tr>' % ('LDT', str(hh) + ':' + str(mm) + ' ' + str(ss))]
     sresponse = _STRINGS[0] % '\n'.join(rows)
     await response.send(sresponse)
     rstcount = 0
@@ -615,6 +615,24 @@ async def index(request, response):
     if data is not None:
         if 'OK1' in data: rouovr = True
         if 'OK0' in data: rouovr = False
+        await response.start_html()
+        await response.send(_STRINGS[1] % 'OK')
+    else:
+        await response.start_html()
+        await response.send(_STRINGS[1] % 'FAIL') 
+
+@app.route('/chgconf')
+async def index(request, response):
+    await response.start_html()
+    await response.send(_STRINGS[1] % _STRINGS[2] % 'chg1')
+
+@app.route('/chg1')
+async def index(request, response):
+    global chg
+    data = safe_get("http://10.0.0.56:1412/charge", timeout=3)
+    if data is not None:
+        if 'OK1' in data: chg = True
+        if 'OK0' in data: chg = False
         await response.start_html()
         await response.send(_STRINGS[1] % 'OK')
     else:
