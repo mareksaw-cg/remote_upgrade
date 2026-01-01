@@ -5,197 +5,197 @@
 ; ------------------------------------------------------------
 
 ; ROM ROUTINES
-LOAD_SAVE	EQU	508	; LOAD/SAVE ROM ROUTINE
-SLOW_FAST	EQU	519
-SET_FAST	EQU	743	; SET-FAST ROM ROUTINE
-INBYTE	EQU         844         ; ROM IN-BYTE, returns byte in C
-FAST	EQU	3875	; FAST ROM ROUTINE
-SLOW	EQU	3883	; SLOW ROM ROUTINE
+LOAD_SAVE	EQU		508			; LOAD/SAVE ROM ROUTINE
+SLOW_FAST	EQU		519
+SET_FAST	EQU		743			; SET-FAST ROM ROUTINE
+INBYTE  	EQU     844         ; ROM IN-BYTE, returns byte in C
+FAST		EQU		3875		; FAST ROM ROUTINE
+SLOW		EQU		3883		; SLOW ROM ROUTINE
 ;
-QROM1	EQU         8192	; QROM AREA START = DISKTOP ADDRESS
-DISKTOP	EQU	8192	; TOP OF RAMDISK AREA
-VDISKTOP	EQU	61440	; VALUE FOR DISKTOP
-OUTREG	EQU	8194	; OUT REGISTER
-FILEREG	EQU	8195	; FILE NUMBER REGISTER (USED TO CHANGE FILE_NO)
-QROMLEN	EQU	8192	; QROM AREA LENGTH
-CODEAREA	EQU	8256	; BEGIN OF CODE AREA
+QROM1       EQU     8192		; QROM AREA START = DISKTOP ADDRESS
+DISKTOP		EQU		8192		; TOP OF RAMDISK AREA
+VDISKTOP	EQU		61440		; VALUE FOR DISKTOP
+OUTREG		EQU		8194		; OUT REGISTER
+FILEREG		EQU		8195		; FILE NUMBER REGISTER (USED TO CHANGE FILE_NO)
+QROMLEN		EQU		8192		; QROM AREA LENGTH
+CODEAREA	EQU		8256		; BEGIN OF CODE AREA
 ;
-VERSN	EQU	16393	; START OF BASIC AND SAVE AREA
-D_FILE	EQU	16396	; START OF DISPLAY AREA
-E_LINE	EQU	16404	; E_LINE SYSTEM VARIABLE
-REM_1_CODE	EQU	16514	; START OF CODE IN 1 REM LINE
+VERSN		EQU		16393		; START OF BASIC AND SAVE AREA
+D_FILE		EQU		16396		; START OF DISPLAY AREA
+E_LINE		EQU		16404		; E_LINE SYSTEM VARIABLE
+REM_1_CODE	EQU		16514		; START OF CODE IN 1 REM LINE
 ;
-RAM31	EQU	32768	; UPPER RAM AREA START = CURRENT RAMDISK SAVE ADDRESS
-NOOFFILES	EQU	32770	; NUMBER OF FILES ON RAMDISK
-FILE_NO	EQU	32771	; CURRENT FILE NO ON DISK
-FILE_TABLE	EQU	32772	; BEGIN OF FILE LOCATION TABLE
-;DISKTOP	EQU	32772	; POINTER TO ALTERNATIVE LOCATION OF TOP OF RAMDISK AREA
-RAMDISK1	EQU	32870	; START OF RAMDISK AREA
-RAM3TOP	EQU	65535	; TOP OF UPPER RAM
+RAM31		EQU		32768		; UPPER RAM AREA START = CURRENT RAMDISK SAVE ADDRESS
+NOOFFILES	EQU		32770		; NUMBER OF FILES ON RAMDISK
+FILE_NO		EQU		32771		; CURRENT FILE NO ON DISK
+FILE_TABLE	EQU		32772		; BEGIN OF FILE LOCATION TABLE
+;DISKTOP		EQU		32772		; POINTER TO ALTERNATIVE LOCATION OF TOP OF RAMDISK AREA
+RAMDISK1	EQU		32870		; START OF RAMDISK AREA
+RAM3TOP		EQU		65535		; TOP OF UPPER RAM
 ;
 ; LOAD_TORAM DEFINITIONS
 ;
-DEST	EQU         49152       ; DESINATION ADDRESS FOR LOAD_TORAM ROUTINE, USE IN BANK1 ONLY
-VERSNRAM	EQU	DEST
-E_LINERAM	EQU	DEST+11
-E_LINERAMH	EQU	DEST+12
+DEST		EQU     49152       ; DESINATION ADDRESS FOR LOAD_TORAM ROUTINE, USE IN BANK1 ONLY
+VERSNRAM	EQU		DEST
+E_LINERAM	EQU		DEST+11
+E_LINERAMH	EQU		DEST+12
 ;
-OUTPOR	EQU	127	; OUT PORT NUMBER
-QROM_CLEN	EQU	1984	; QROM CODE LENGTH
-CODE_LEN	EQU	2048	; LENGTH OF CODE AREA IN QROM
+OUTPORT		EQU		127			; OUT PORT NUMBER
+QROM_CLEN	EQU		1984		; QROM CODE LENGTH
+CODE_LEN	EQU		2048		; LENGTH OF CODE AREA IN QROM
 ;
-EEDISK_TAB	EQU	10240	; EEDISK FILE LOCATION TABLE (ON INIT CONTAINS MINEEADDRH)
-EENOFILES	EQU	10242	; NUMBER OF FILES ON EEMDISK
-EEFILE_NO	EQU	10243	; NUMBER OF FILES ON RAMDISK
-MAXEEADDR	EQU	10244	; CONTAINS MAXEEADDRH -> MAX USABLE EEPROM ADDRESS (2B)
-MAXEEADDRH	EQU	255	; HIGH BYTE OF LAST ADDR TO WRITE
-MINEEADDRH	EQU	1	; HIGH BYTE OF FIRST ADDR TO WRITE, RESERVED SPACE BELOW
+EEDISK_TAB	EQU		10240		; EEDISK FILE LOCATION TABLE (ON INIT CONTAINS MINEEADDRH)
+EENOFILES	EQU		10242		; NUMBER OF FILES ON EEMDISK
+EEFILE_NO	EQU		10243		; NUMBER OF FILES ON RAMDISK
+MAXEEADDR	EQU		10244		; CONTAINS MAXEEADDRH -> MAX USABLE EEPROM ADDRESS (2B)
+MAXEEADDRH	EQU		255			; HIGH BYTE OF LAST ADDR TO WRITE
+MINEEADDRH	EQU		1			; HIGH BYTE OF FIRST ADDR TO WRITE, RESERVED SPACE BELOW
 ;
-LISTPTR	EQU         8196 	; I2C SCAN SCRATCH
-I2CPTR	EQU	8204	; SCRATCH FOR I2C DATA
-EEPTR	EQU	8212	; SCRATCH FOR EEPROM
-PCFPTR	EQU	8216	; SCRATCH FOR PCF8574
-I2C_ADR_REG	EQU	8218	; EEPROM ADDRESS REGISTER
+LISTPTR     EQU     8196 		; I2C SCAN SCRATCH
+I2CPTR		EQU		8204		; SCRATCH FOR I2C DATA
+EEPTR		EQU		8212		; SCRATCH FOR EEPROM
+PCFPTR		EQU		8216		; SCRATCH FOR PCF8574
+I2C_ADR_REG	EQU		8218		; EEPROM ADDRESS REGISTER
 ;
-EEPROM7	EQU 	80          ; 24LC512 I2C ADDRESS
-EEPROM_W	EQU 	EEPROM7*2   ; WRITE ADDRESS
-EEPROM_R	EQU 	EEPROM7*2+1 ; READ ADDRESS
+EEPROM7     EQU 	80          ; 24LC512 I2C ADDRESS
+EEPROM_W    EQU 	EEPROM7*2   ; WRITE ADDRESS
+EEPROM_R    EQU 	EEPROM7*2+1 ; READ ADDRESS
 
 ; CODE
-            ORG	8192
-            DEFW	61440	; SET DISKTOP VARIABLE AT 8192
-            ORG         8218
-            DEFB        EEPROM7	; SET DEFAULT EEPROM ADDRESS
+            ORG		8192
+            DEFW	61440		; SET DISKTOP VARIABLE AT 8192
+            ORG		8218
+            DEFB	EEPROM7
 
-            ORG	8256	; START OF QROM CODE AREA
+            ORG		8256		; START OF QROM CODE AREA
 
 ; INIT_RAM1 - 8256 (16578 IN 1 REM FILE)
 INIT_RAM1:
-            XOR	A
-            LD	HL,QROM1
-            LD	(HL),A
-            LD	DE,QROM1+1
-            LD	BC,CODE_LEN-1	; CLEARS ONLY CODE AREA
+            XOR		A
+            LD		HL,QROM1
+            LD		(HL),A
+            LD		DE,QROM1+1
+            LD		BC,CODE_LEN-1			; CLEARS ONLY CODE AREA
             LDIR
             RET
 
 ; INIT_RAM3 - 8270
 INIT_RAM3:
             xor 	A                         
-            ld 	HL, RAM31                 
-            ld 	(HL), A                    
-            ld 	DE, RAM31+1                 
-            ld 	BC, RAM3TOP-RAM31                 
+            ld 		HL, RAM31                 
+            ld 		(HL), A                    
+            ld 		DE, RAM31+1                 
+            ld 		BC, RAM3TOP-RAM31                 
             ldir                          
-            ld 	HL, RAMDISK1                 
-            ld 	(RAM31), HL               
+            ld 		HL, RAMDISK1                 
+            ld 		(RAM31), HL               
             ret                           
     
 ; GET_SAV_LENGTH - 8290    
 GET_SAV_LENGTH:
-            ld 	HL, (E_LINE)                
-            ld 	BC, VERSN                  
-            or 	A                          
+            ld 		HL, (E_LINE)                
+            ld 		BC, VERSN                  
+            or 		A                          
             sbc 	HL, BC                    
-            ld 	B, H                       
-            ld 	C, L                       
+            ld 		B, H                       
+            ld 		C, L                       
             ret                           
 
 ; GET_FREE_RAM3 - 8302
 GET_FREE_RAM3:    
-            ld 	HL, (DISKTOP)               
-            ld 	DE, (RAM31)               
-            or 	A                          
+            ld 		HL, (DISKTOP)               
+            ld 		DE, (RAM31)               
+            or 		A                          
             sbc 	HL, DE                    
-            ld 	B, H                       
-            ld 	C, L                       
+            ld 		B, H                       
+            ld 		C, L                       
             ret                                              
     
 ; CHECK_SPACE_FOR_SAVE - 8315
 CHECK_SPACE_FOR_SAVE:    
-            ld 	HL, (E_LINE)               
-            ld 	BC, VERSN                 
-            or 	A                          
+            ld 		HL, (E_LINE)               
+            ld 		BC, VERSN                 
+            or 		A                          
             sbc 	HL, BC                    
-            ld 	B, H                       
-            ld 	C, L                       
-            ld 	HL, (DISKTOP)               
-            or 	A                          
+            ld 		B, H                       
+            ld 		C, L                       
+            ld 		HL, (DISKTOP)               
+            or 		A                          
             sbc 	HL, BC                    
-            ld 	BC, (RAM31)               
-            or 	A                          
+            ld 		BC, (RAM31)               
+            or 		A                          
             sbc 	HL, BC                    
-            ld 	B, H                       
-            ld 	C, L                      
+            ld 		B, H                       
+            ld 		C, L                      
             ret                       
 
 ; PREPARE_SAVE - 8342
 PREPARE_SAVE:
-            ld 	A, (NOOFFILES)                
+            ld 		A, (NOOFFILES)                
             inc 	A                         
-            ld 	(NOOFFILES), A                
-            ld 	(FILE_NO), A                
-            ld 	E, A                       
+            ld 		(NOOFFILES), A                
+            ld 		(FILE_NO), A                
+            ld 		E, A                       
             add 	A, A                      
             add 	A, E                      
-            ld 	E, A                       
-            ld 	D, 0x0                     
-            ld 	HL, FILE_TABLE                 
+            ld 		E, A                       
+            ld 		D, 0x0                     
+            ld 		HL, FILE_TABLE                 
             add 	HL, DE                    
-            ld 	A, (FILE_NO)                
-            ld 	(HL), A                    
-            ld 	BC, (RAM31)               
+            ld 		A, (FILE_NO)                
+            ld 		(HL), A                    
+            ld 		BC, (RAM31)               
             inc 	HL                        
-            ld 	(HL), C                    
+            ld 		(HL), C                    
             inc 	HL                        
-            ld 	(HL), B                    
+            ld 		(HL), B                    
             ret                           
     
 ; SAVE_TO_RAM - 8375 (ADDR IN BC)
 SAVE_TO_RAM:    
             call 	SET_FAST                 ; call 0x2e7
-            ld 	HL, VERSN                  
+            ld 		HL, VERSN                  
 SAVLOOP     call 	SAVBYTES                    
             call 	LOAD_SAVE                ; call 0x1fc
-            jr 	SAVLOOP                     
-SAVBYTES    ld 	A, (HL)                    
-            ld 	(BC), A                    
+            jr 		SAVLOOP                     
+SAVBYTES    ld 		A, (HL)                    
+            ld 		(BC), A                    
             inc 	BC                        
             ret                          
     
 ; UPDATE_POINTER - 8393
 UPDATE_POINTER:    
             call 	GET_SAV_LENGTH                   
-            ld 	HL, (RAM31)               
+            ld 		HL, (RAM31)               
             add 	HL, BC                    
-            ld 	(RAM31), HL               
+            ld 		(RAM31), HL               
             ret                           
     
 ; POINTER_TO_LOAD - 8404 (FILE NO IN 32771)
 POINTER_TO_LOAD:    
-            ld 	A, (FILE_NO)                
-            ld 	E, A                       
+            ld 		A, (FILE_NO)                
+            ld 		E, A                       
             add 	A, A                      
             add 	A, E                      
-            ld 	E, A                       
-            ld 	D, 0x0                     
-            ld 	HL, FILE_TABLE                 
+            ld 		E, A                       
+            ld 		D, 0x0                     
+            ld 		HL, FILE_TABLE                 
             add 	HL, DE                    
             inc 	HL                        
-            ld 	C, (HL)                    
+            ld 		C, (HL)                    
             inc 	HL                        
-            ld 	B, (HL)                    
+            ld 		B, (HL)                    
             ret                           
     
 ; LOAD_FROM_RAM - 8422
 LOAD_FROM_RAM:    
             call 	SET_FAST                    
-            ld 	HL, VERSN                 
+            ld 		HL, VERSN                 
 LOADLOOP    call 	LOADBYTES                     
             call 	LOAD_SAVE                   
-            jr 	LOADLOOP                        
-LOADBYTES   ld 	A, (BC)                    
-            ld 	(HL), A                    
+            jr 		LOADLOOP                        
+LOADBYTES   ld 		A, (BC)                    
+            ld 		(HL), A                    
             inc 	BC                        
             ret                           
     
@@ -208,8 +208,8 @@ FULL_LOAD_RAM:
 ; FULL_SAVE_RAM - 8447
 FULL_SAVE_RAM:    
             call 	CHECK_SPACE_FOR_SAVE       ; call 8313
-            ld 	A, B                       
-            or 	C                          
+            ld 		A, B                       
+            or 		C                          
             ret 	z                         
             call 	PREPARE_SAVE               ; call 8338
             call 	SAVE_TO_RAM                ; call 8371
@@ -219,104 +219,104 @@ FULL_SAVE_RAM:
 ; GET_FILE_LENGTH - 8463 
 GET_FILE_LENGTH:    
             call 	POINTER_TO_LOAD            ; call 8400
-            ld 	HL, 0xb                    
+            ld 		HL, 0xb                    
             add 	HL, BC                    
-            ld 	C, (HL)                    
+            ld 		C, (HL)                    
             inc 	HL                        
-            ld 	B, (HL)                    
-            ld 	DE, VERSN                  
-            ld 	H, B                       
-            ld 	L, C                       
-            or 	A                          
+            ld 		B, (HL)                    
+            ld 		DE, VERSN                  
+            ld 		H, B                       
+            ld 		L, C                       
+            or 		A                          
             sbc 	HL, DE                    
-            ld 	B, H                       
-            ld 	C, L                       
+            ld 		B, H                       
+            ld 		C, L                       
             ret                           
     
 ; CHK_RAM1 - 8484
 CHK_RAM1:    
-            ld 	HL, QROM1                 
-            ld 	B, 0x20                    
-            jr 	CALCXOR                      
+            ld 		HL, QROM1                 
+            ld 		B, 0x20                    
+            jr 		CALCXOR                      
     
 ; CHK_RAM3 - 8491
 CHK_RAM3:
-            ld 	HL, RAM31                 
-            ld 	B, 0x40                       
-            jr 	CALCXOR                       
+            ld 		HL, RAM31                 
+            ld 		B, 0x40                       
+            jr 		CALCXOR                       
     
 ; CHK_RAM4 - 8498
 CHK_RAM4:    
-            ld 	HL, 49152                  
-            ld 	B, 0x40                    
-CALCXOR     ld 	C, 0x0                     
+            ld 		HL, 49152                  
+            ld 		B, 0x40                    
+CALCXOR     ld 		C, 0x0                     
             xor 	A                         
 ;
 XORLOOP     xor 	(HL)                      
             inc 	HL                        
             dec 	C                         
-            jr 	nz, XORLOOP                   
+            jr 		nz, XORLOOP                   
             djnz 	XORLOOP                     
-            ld 	B, 0x0                     
-            ld 	C, A                       
+            ld 		B, 0x0                     
+            ld 		C, A                       
             ret                           
     
 ; WRITE_OUT - 8517
 WRITE_OUT:    
-            ld 	A, (OUTREG)                
+            ld 		A, (OUTREG)                
             out 	(OUTPORT), A                 
             ret                           
     
 ; BEEP - 8523 (REQUIRES TONE LENGTH IN HL)
 BEEP_VAR:    
-            ld 	A, (OUTREG)                
-            or 	0x8                        
+            ld 		A, (OUTREG)                
+            or 		0x8                        
             out 	(OUTPORT), A                 
-            ld 	L, 0x0                     
+            ld 		L, 0x0                     
 BEEPLOOP    dec 	L                         
-            jr 	nz, BEEPLOOP                   
+            jr 		nz, BEEPLOOP                   
             dec 	H                         
-            jr 	nz, BEEPLOOP                   
-            ld 	A, (OUTREG)                
+            jr 		nz, BEEPLOOP                   
+            ld 		A, (OUTREG)                
             out 	(OUTPORT), A                 
             ret    
             
 ; QUICK_SET_BANK1 - 8545
-            ORG	8545
+            ORG		8545
             CALL	SET_BANK1
             RET 
 ; QUICK_SET_BANK0 - 8550
-            ORG	8550
+            ORG		8550
             CALL	SET_BANK0
             RET            
 ; QUICK_FILE_NO_COPY - 8555
-            ORG	8555
+            ORG		8555
             CALL	FILE_NO_COPY
             RET
 ; QUICK_INIT_EEPROM - 8560            
-            ORG	8560
+            ORG		8560
             CALL	INIT_EEPROM
             RET
 ; QUICK_DELETE_LAST_F - 8565            
-            ORG	8565
+            ORG		8565
             CALL	ENABLE_WRITE
             CALL	DELETE_LAST_F
             CALL	DISABLE_WRITE
             RET
 ; QUICK_SAVE_ - 8575            
-            ORG	8575
-            ld 	HL, NOOFFILES                 
-            ld 	A, (HL)                    
+            ORG		8575
+            ld 		HL, NOOFFILES                 
+            ld 		A, (HL)                    
             inc 	HL                        
-            cp 	(HL)                       
-            jr 	nz, EXITDEL1
+            cp 		(HL)                       
+            jr 		nz, EXITDEL1
             CALL	ENABLE_WRITE
             CALL	FULL_SAVE_RAM
             CALL	DISABLE_WRITE
 EXITDEL1	RET
     
 ; START->
-            ORG	8597
+            ORG		8597
             
             DEFB	0x53
             DEFB	0x54
@@ -330,60 +330,60 @@ EXITDEL1	RET
             
 ; COPY QROM_CODE_LENGTH FROM 1 REM TO 8192 (8604)
             call 	16578                 ; ROUTINE IN 1 REM TO CLEAR QROM 
-            ld 	HL, REM_1_CODE        
-            ld 	DE, QROM1                
-            ld 	BC, QROM_CLEN             
+            ld 		HL, REM_1_CODE        
+            ld 		DE, QROM1                
+            ld 		BC, QROM_CLEN             
             ldir                          
             ret                           
     
 ; DELETE_LAST_F_RAMDISK - 8619
 DELETE_LAST_F:    
-            ld 	HL, NOOFFILES                 
-            ld 	A, (HL)                    
+            ld 		HL, NOOFFILES                 
+            ld 		A, (HL)                    
             inc 	HL                        
-            cp 	(HL)                       
-            jr 	nz, EXITDEL                   
+            cp 		(HL)                       
+            jr 		nz, EXITDEL                   
             call 	POINTER_TO_LOAD                   
-            ld 	H, B                       
-            ld 	L, C                       
-            ld 	(RAM31), HL               
-            ld 	A, (NOOFFILES)                
+            ld 		H, B                       
+            ld 		L, C                       
+            ld 		(RAM31), HL               
+            ld 		A, (NOOFFILES)                
             dec 	A                         
-            ld 	(NOOFFILES), A                
-            ld 	A, (FILE_NO)                
+            ld 		(NOOFFILES), A                
+            ld 		A, (FILE_NO)                
             dec 	A                         
-            ld 	(FILE_NO), A                
+            ld 		(FILE_NO), A                
 EXITDEL		ret                           
     
 ; ENABLE_WRITE - 8650
 ENABLE_WRITE:    
-            ld 	A, (OUTREG)                
-            or 	0x4                        
-            ld 	(OUTREG), A                
+            ld 		A, (OUTREG)                
+            or 		0x4                        
+            ld 		(OUTREG), A                
             call 	OUTTOPORT                   
             ret                           
     
 ; DISABLE_WRITE - 8662
 DISABLE_WRITE:    
-            ld 	A, (OUTREG)                
+            ld 		A, (OUTREG)                
             and 	0xfb                      
-            ld 	(OUTREG), A                
+            ld 		(OUTREG), A                
             call 	OUTTOPORT                   
             ret                           
     
 ; SET_BANK1 - 8674
 SET_BANK1:    
-            ld 	A, (OUTREG)                
-            or 	0x1                        
-            ld 	(OUTREG), A                
+            ld 		A, (OUTREG)                
+            or 		0x1                        
+            ld 		(OUTREG), A                
             call 	OUTTOPORT                   
             ret                           
     
 ; SET_BANK0 - 8686
 SET_BANK0:    
-            ld 	A, (OUTREG)                
+            ld 		A, (OUTREG)                
             and 	0xfe                      
-            ld 	(OUTREG), A                
+            ld 		(OUTREG), A                
             call 	OUTTOPORT                  
             ret                           
 ;  
@@ -397,66 +397,66 @@ SET_BANK0:
 ; CLEAR_8192B (ADDR IN HL) - 8704
 CLEAR_8192:    
             xor 	A                         
-            ld 	(HL), A                   
-            ld 	D, H                       
-            ld 	E, L                       
+            ld 		(HL), A                    
+            ld 		D, H                       
+            ld 		E, L                       
             inc 	DE                        
-            ld 	BC, 0x1fff                 
+            ld 		BC, 0x1fff                 
             ldir                          
             ret                           
     
 ; COPY ROM (0) TO UPPER RAM (61440) - 8715
 COPY0TOHR:    
-            ld 	HL, 0x0                    
-            ld 	DE, VDISKTOP                 
-            ld 	BC, 0x1000                 
+            ld 		HL, 0x0                    
+            ld 		DE, VDISKTOP                 
+            ld 		BC, 0x1000                 
             ldir                          
             ret                           
     
 ; COPY UPPER RAM (61440) TO ROM (0) - 8727
 COPYHRTO0:    
-            ld 	HL, VDISKTOP                 
-            ld 	DE, 0x0                    
-            ld 	BC, 0x1000                 
+            ld 		HL, VDISKTOP                 
+            ld 		DE, 0x0                    
+            ld 		BC, 0x1000                 
             ldir                          
             ret                           
     
 ; CLEAR 32768 TO 65535 - 8739
 CLEAR_HRAM:    
-            ld 	HL, 0x8000                 
+            ld 		HL, 0x8000                 
             call 	CLEAR_8192                   
-            ld 	HL, 0xa000                 
+            ld 		HL, 0xa000                 
             call 	CLEAR_8192                   
-            ld 	HL, 0xc000                 
+            ld 		HL, 0xc000                 
             call 	CLEAR_8192                   
-            ld 	HL, 0xe000                 
+            ld 		HL, 0xe000                 
             call 	CLEAR_8192                   
             ret                           
     
 ; XOR 32768 TO 65535 - 8764
 XOR_HRAM:    
-            ld 	HL, RAM31                 
-            ld 	B, 0x80                    
-            ld 	C, 0x0                     
+            ld 		HL, RAM31                 
+            ld 		B, 0x80                    
+            ld 		C, 0x0                     
 XOR_SUB     xor 	A                         
 LA81        xor 	(HL)                      
             inc 	HL                        
             dec 	C                         
-            jr 	nz, LA81                   
+            jr 		nz, LA81                   
             djnz 	LA81                     
-            ld 	B, 0x0                     
-            ld 	C, A                       
+            ld 		B, 0x0                     
+            ld 		C, A                       
             ret                           
 
 ; BEEP - 8783
 BEEP:
-            ld 	B, 0x5                     
-            ld 	A, (OUTREG)                
+            ld 		B, 0x5                     
+            ld 		A, (OUTREG)                
             set 	3, A                      
             out 	(OUTPORT), A                 
-            ld 	C, 0x0                     
+            ld 		C, 0x0                     
 BEEPLOOP1   dec 	C                         
-            jr 	nz, BEEPLOOP1                  
+            jr 		nz, BEEPLOOP1                  
             djnz 	BEEPLOOP1                    
             res 	3, A                      
             out 	(OUTPORT), A                 
@@ -464,18 +464,18 @@ BEEPLOOP1   dec 	C
 
 ; RAM0_4096_ON - 8804
 RAM0ON:    
-            ld 	A, (OUTREG)                
+            ld 		A, (OUTREG)                
             set 	1, A                      
             out 	(OUTPORT), A                 
-            ld 	(OUTREG), A                
+            ld 		(OUTREG), A                
             ret                           
     
 ; RAM0_4096_OFF - 8815   
 RAM0OFF:    
-            ld 	A, (OUTREG)                
+            ld 		A, (OUTREG)                
             res 	1, A                      
             out 	(OUTPORT), A                 
-            ld 	(OUTREG), A                
+            ld 		(OUTREG), A                
             ret                           
     
 ; SAFELY_ENABLE_RAM0-4096 (&COPY) - 8826
@@ -497,21 +497,21 @@ SAFELY_EN_RAM0:
     
 ; READ PORT 127 - 8855
 READPORT:    
-            in 	A, (OUTPORT)                  
-            ld 	C, A                       
-            ld 	B, 0x0                     
+            in 		A, (OUTPORT)                  
+            ld 		C, A                       
+            ld 		B, 0x0                     
             ret                           
     
 ; OUT (8194) TO PORT 127 - 8861
 OUTTOPORT:    
-            ld 	A, (OUTREG)                
+            ld 		A, (OUTREG)                
             out 	(OUTPORT), A                 
             ret                           
     
 ; CODE AREA XOR - 8867
 CODE_XOR:    
-            ld 	HL, CODEAREA                 
-            ld 	BC, QROM_CLEN                 
+            ld 		HL, CODEAREA                 
+            ld 		BC, QROM_CLEN                 
             call 	XOR_SUB                   
             ret                           
     
@@ -519,28 +519,28 @@ CODE_XOR:
 SUSPEND:    
             call 	FAST                     
             xor 	A                         
-            ld 	(0x0), A                   
-            ld 	A, 0xf5                    
-            ld 	(0x1), A                   
-            ld 	A, 0xc3                    
-            ld 	(0x2), A                   
-            ld 	A, 0xe2                    
-            ld 	(0x3), A                   
-            ld 	A, 0x22                    
-            ld 	(0x4), A                   
+            ld 		(0x0), A                   
+            ld 		A, 0xf5                    
+            ld 		(0x1), A                   
+            ld 		A, 0xc3                    
+            ld 		(0x2), A                   
+            ld 		A, 0xe2                    
+            ld 		(0x3), A                   
+            ld 		A, 0x22                    
+            ld 		(0x4), A                   
             di                            
-SUSPLOOP   	jr 	SUSPLOOP                     
+SUSPLOOP   	jr 	    SUSPLOOP                     
             nop                           
             nop                           
             nop                           
             nop                           
             xor 	A                         
-            or 	0x8                        
+            or 		0x8                        
             out 	(OUTPORT), A                 
-            ld 	B, 0x50                    
-            ld 	C, 0x0                     
+            ld 		B, 0x50                    
+            ld 		C, 0x0                     
 SSLOOP   	dec 	C                         
-            jr 	nz, SSLOOP                  
+            jr 		nz, SSLOOP                  
             djnz 	SSLOOP                    
             and 	0xf7                      
             out 	(OUTPORT), A                 
@@ -552,11 +552,11 @@ SSLOOP   	dec 	C
             nop                           
             pop 	AF                        
             out 	(0xfd), A                 
-            ld 	BC, 0x7fff                 
+            ld 		BC, 0x7fff                 
             nop                           
             nop                           
             nop                           
-            jp 	0x3cb                      
+            jp 		0x3cb                      
             nop                           
             nop                           
             nop                           
@@ -574,38 +574,38 @@ INIT_RAM_FULL:
     
 ; FILE NO (8195)->(32771) - 8968
 FILE_NO_COPY:    
-            ld 	A, (FILEREG)                
-            or 	A                          
-            jr 	z, IFZERO                   
-            ld 	HL, NOOFFILES                 
-            cp 	(HL)                       
-            jr 	z, IFOK                   
-            jr 	c, IFOK                   
+            ld 		A, (FILEREG)                
+            or 		A                          
+            jr 		z, IFZERO                   
+            ld 		HL, NOOFFILES                 
+            cp 		(HL)                       
+            jr 		z, IFOK                   
+            jr 		c, IFOK                   
 IFZERO      push 	HL                       
-            ld 	HL, (D_FILE)               
+            ld 		HL, (D_FILE)               
             inc 	HL                        
-            ld 	(HL), 0x2a                 
+            ld 		(HL), 0x2a                 
             inc 	HL                        
-            ld 	(HL), 0x37                 
+            ld 		(HL), 0x37                 
             inc 	HL                        
-            ld 	(HL), 0x37                 
+            ld 		(HL), 0x37                 
             inc 	HL                        
-            ld 	(HL), 0x34                 
+            ld 		(HL), 0x34                 
             inc 	HL                        
-            ld 	(HL), 0x37                 
+            ld 		(HL), 0x37                 
             pop 	HL                        
             ret                           
-IFOK        ld 	C, A                       
+IFOK        ld 		C, A                       
             inc 	HL                        
             call 	ENABLE_WRITE                   
-            ld 	A, C                       
-            ld 	(HL), A                    
+            ld 		A, C                       
+            ld 		(HL), A                    
             call 	DISABLE_WRITE                   
-            ld 	HL, (D_FILE)               
+            ld 		HL, (D_FILE)               
             inc 	HL                        
-            ld 	(HL), 0x34                 
+            ld 		(HL), 0x34                 
             inc 	HL                        
-            ld 	(HL), 0x30                 
+            ld 		(HL), 0x30                 
             ret                           
               
 ; ZX81 I2C 7-bit scanner and device reader (bit-banged)
@@ -621,11 +621,11 @@ IFOK        ld 	C, A
 
 ;            ORG     9023
 
-SDA_M       EQU	16 
-SCL_M       EQU	32 
+SDA_M       EQU     16 
+SCL_M       EQU     32 
 
-START7      EQU	8 ; first address to probe (0x08)
-END7P1      EQU	120 ; stop when C==0x78 (i.e., last is 0x77)
+START7      EQU     8 ; first address to probe (0x08)
+END7P1      EQU     120 ; stop when C==0x78 (i.e., last is 0x77)
 
 ; ------------------------------------------------------------
 ; I2C START: SDA goes low while SCL high, then pull SCL low
@@ -634,16 +634,16 @@ END7P1      EQU	120 ; stop when C==0x78 (i.e., last is 0x77)
 ; I2C_START - 9023
 I2C_START:           
 ; ensure both released high
-            LD 	A, (OUTREG)
-            OUT	(OUTPORT),A 
+            LD 		A, (OUTREG)
+            OUT     (OUTPORT),A 
             NOP
 ; SDA low while SCL high
-            SET	4,A 
-            OUT	(OUTPORT),A 
+            SET		4,A 
+            OUT     (OUTPORT),A 
 ;            NOP
 ; SCL low
-            SET	5,A
-            OUT	(OUTPORT),A  
+            SET		5,A
+            OUT     (OUTPORT),A  
             RET      
 
 ; ------------------------------------------------------------
@@ -653,17 +653,17 @@ I2C_START:
 ; I2C_STOP - 9038
 I2C_STOP:            
 ; ensure SDA low, SCL low
-            SET	4,A
-            SET	5,A
-            OUT	(OUTPORT),A 
+            SET		4,A
+            SET		5,A
+            OUT     (OUTPORT),A 
             NOP 
 ; release SCL high
-            RES	5,A 
-            OUT	(OUTPORT),A 
+            RES		5,A 
+            OUT     (OUTPORT),A 
             NOP
 ; release SDA high while SCL high
-            RES	4,A 
-            OUT	(OUTPORT),A  
+            RES		4,A 
+            OUT     (OUTPORT),A  
             RET      
 
 ; ------------------------------------------------------------
