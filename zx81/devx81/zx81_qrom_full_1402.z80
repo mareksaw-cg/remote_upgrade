@@ -1,0 +1,2172 @@
+; ------------------------------------------------------------
+; DEVX81 FIRMWARE AT 8192
+; ------------------------------------------------------------
+; DECLARATIONS
+; ------------------------------------------------------------
+; VERSION	07012026
+; ------------------------------------------------------------
+; ROM ROUTINES
+;
+LOAD_SAVE	EQU		508			; LOAD/SAVE ROM ROUTINE
+SLOW_FAST	EQU		519
+KEYBOARD    EQU		699			; ROM KEYBOARD SCAN ROUTINE 0x02BB
+SET_FAST	EQU		743			; SET-FAST ROM ROUTINE
+INBYTE  	EQU     844         ; ROM IN-BYTE, returns byte in C
+CLS			EQU		2602		; ROM CLS ROUTINE
+FAST		EQU		3875		; FAST ROM ROUTINE
+SLOW		EQU		3883		; SLOW ROM ROUTINE
+;
+QROM1       EQU     8192		; QROM AREA START = DISKTOP ADDRESS
+DISKTOP		EQU		8192		; TOP OF RAMDISK AREA
+VDISKTOP	EQU		61440		; VALUE FOR DISKTOP
+OUTREG		EQU		8194		; OUT REGISTER
+FILEREG		EQU		8195		; FILE NUMBER REGISTER (USED TO CHANGE FILE_NO)
+QROMLEN		EQU		8192		; QROM AREA LENGTH
+CODEAREA	EQU		8256		; BEGIN OF CODE AREA
+LOADSCRT	EQU		8255		; LOAD/SAVE ROUTINE SCRATCH REGISTER
+;
+VERSN		EQU		16393		; START OF BASIC AND SAVE AREA
+D_FILE		EQU		16396		; START OF DISPLAY AREA
+SCR_LINE1	EQU		1			; DISPLAY LINE 1 OFFSET
+SCR_LINE2	EQU		34			; LINE 2 OFFSET
+SCR_LINE3	EQU		67			; LINE 3 OFFSET
+SCR_LINE4	EQU		100			; LINE 4 OFFSET
+SCR_LINE5	EQU		133			; LINE 5 OFFSET
+E_LINE		EQU		16404		; E_LINE SYSTEM VARIABLE
+REM_1_CODE	EQU		16514		; START OF CODE IN 1 REM LINE
+;
+RAM31		EQU		32768		; UPPER RAM AREA START = CURRENT RAMDISK SAVE ADDRESS
+NOOFFILES	EQU		32770		; NUMBER OF FILES ON RAMDISK
+FILE_NO		EQU		32771		; CURRENT FILE NO ON DISK
+FILE_TABLE	EQU		32772		; BEGIN OF FILE LOCATION TABLE
+;DISKTOP		EQU		32772		; POINTER TO ALTERNATIVE LOCATION OF TOP OF RAMDISK AREA
+RAMDISK1	EQU		32870		; START OF RAMDISK AREA
+RAM3TOP		EQU		65535		; TOP OF UPPER RAM
+;
+; KEYBOARD SCANNING CONSTANTS
+;
+K_0			EQU		65007
+K_1     	EQU		65015
+K_2     	EQU		64503
+K_3     	EQU		63479
+K_4     	EQU		61431
+K_5     	EQU		57335
+K_6     	EQU		57327
+K_7     	EQU		61423
+K_8     	EQU		63471
+K_9     	EQU		64495
+K_ENT   	EQU		64959
+ENDMARK     EQU     99  		; end-of-string marker (your choice)
+;
+; LOAD_TORAM DEFINITIONS
+;
+DEST		EQU     49152       ; DESTINATION ADDRESS FOR LOAD_TORAM ROUTINE, USE IN BANK1 ONLY
+VERSNRAM	EQU		DEST
+VERSNRAMH	EQU		DEST/256
+E_LINERAM	EQU		DEST+11
+E_LINERAMH	EQU		DEST+12
+;
+OUTPORT		EQU		127			; OUT PORT NUMBER
+QROM_CLEN	EQU		4032		; QROM CODE LENGTH
+CODE_LEN	EQU		4096		; LENGTH OF CODE AREA IN QROM
+;
+EEDISK_TAB	EQU		12288		; EEDISK FILE LOCATION TABLE (ON INIT CONTAINS MINEEADDRH)
+EENOFILES	EQU		EEDISK_TAB+2; NUMBER OF FILES ON EEDISK
+EEFILE_NO	EQU		EEDISK_TAB+3; CURRENT FILE ON EEDISK
+MAXEEADDR	EQU		EEDISK_TAB+4; CONTAINS MAXEEADDRH -> MAX USABLE EEPROM ADDRESS (2B)
+MAXEEADDRH	EQU		255			; HIGH BYTE OF LAST ADDR TO WRITE
+MINEEADDRH	EQU		1			; HIGH BYTE OF FIRST ADDR TO WRITE, RESERVED SPACE BELOW
+;
+LISTPTR     EQU     8196 		; I2C SCAN SCRATCH
+I2CPTR		EQU		8204		; SCRATCH FOR I2C DATA
+EEPTR		EQU		8212		; SCRATCH FOR EEPROM
+PCFPTR		EQU		8216		; SCRATCH FOR PCF8574
+I2C_ADR_REG	EQU		8218		; EEPROM ADDRESS REGISTER
+I2C_TAB_BEG	EQU		8219		; BEGIN OF EEPROM CHIP TABLE
+I2C_TAB_END	EQU		8223		; END OF EEPROM CHIP TABLE
+LRAMOFFS	EQU		8224		; 2 BYTE OFFSET VALUE FOR PARALLEL LOAD TO RAM ROUTINE
+;
+EEPROM7     EQU 	80          ; 24LC512 I2C ADDRESS, NOT NEEDED ANYMORE, CURRENT EEPROM ADDRESS IS TAKEN FROM 8218 I2C_ADR_REG
+EEPROM_W    EQU 	EEPROM7*2   ; WRITE ADDRESS
+EEPROM_R    EQU 	EEPROM7*2+1 ; READ ADDRESS
+
+; CODE
+            ORG		8192
+            DEFW	61440		; SET DISKTOP VARIABLE AT 8192
+            ORG		8218
+            DEFB	EEPROM7
+
+            ORG		8256		; START OF QROM CODE AREA
+
+; INIT_RAM1 - 8256 (16578 IN 1 REM FILE)
+INIT_RAM1:
+            XOR		A
+            LD		HL,QROM1
+            LD		(HL),A
+            LD		DE,QROM1+1
+            LD		BC,CODE_LEN-1			; CLEARS ONLY CODE AREA
+            LDIR
+            RET
+
+; INIT_RAM3 - 8270
+INIT_RAM3:
+            xor 	A                         
+            ld 		HL, RAM31                 
+            ld 		(HL), A                    
+            ld 		DE, RAM31+1                 
+            ld 		BC, RAM3TOP-RAM31                 
+            ldir                          
+            ld 		HL, RAMDISK1                 
+            ld 		(RAM31), HL               
+            ret                           
+    
+; GET_SAV_LENGTH - 8290    
+GET_SAV_LENGTH:
+            ld 		HL, (E_LINE)                
+            ld 		BC, VERSN                  
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret                           
+
+; GET_FREE_RAM3 - 8302
+GET_FREE_RAM3:    
+            ld 		HL, (DISKTOP)               
+            ld 		DE, (RAM31)               
+            or 		A                          
+            sbc 	HL, DE                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret                                              
+    
+; CHECK_SPACE_FOR_SAVE - 8315
+CHECK_SPACE_FOR_SAVE:    
+            ld 		HL, (E_LINE)               
+            ld 		BC, VERSN                 
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ld 		HL, (DISKTOP)               
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		BC, (RAM31)               
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		B, H                       
+            ld 		C, L                      
+            ret                       
+
+; PREPARE_SAVE - 8342
+PREPARE_SAVE:
+            ld 		A, (NOOFFILES)                
+            inc 	A                         
+            ld 		(NOOFFILES), A                
+            ld 		(FILE_NO), A                
+            ld 		E, A                       
+            add 	A, A                      
+            add 	A, E                      
+            ld 		E, A                       
+            ld 		D, 0x0                     
+            ld 		HL, FILE_TABLE                 
+            add 	HL, DE                    
+            ld 		A, (FILE_NO)                
+            ld 		(HL), A                    
+            ld 		BC, (RAM31)               
+            inc 	HL                        
+            ld 		(HL), C                    
+            inc 	HL                        
+            ld 		(HL), B                    
+            ret                           
+    
+; SAVE_TO_RAM - 8375 (ADDR IN BC)
+SAVE_TO_RAM:    
+            call 	SET_FAST                 ; call 0x2e7
+            ld 		HL, VERSN                  
+SAVLOOP     call 	SAVBYTES                    
+            call 	LOAD_SAVE                ; call 0x1fc
+            jr 		SAVLOOP                     
+SAVBYTES    ld 		A, (HL)                    
+            ld 		(BC), A                    
+            inc 	BC                        
+            ret                          
+    
+; UPDATE_POINTER - 8393
+UPDATE_POINTER:    
+            call 	GET_SAV_LENGTH                   
+            ld 		HL, (RAM31)               
+            add 	HL, BC                    
+            ld 		(RAM31), HL               
+            ret                           
+    
+; POINTER_TO_LOAD - 8404 (FILE NO IN 32771)
+POINTER_TO_LOAD:    
+            ld 		A, (FILE_NO)                
+            ld 		E, A                       
+            add 	A, A                      
+            add 	A, E                      
+            ld 		E, A                       
+            ld 		D, 0x0                     
+            ld 		HL, FILE_TABLE                 
+            add 	HL, DE                    
+            inc 	HL                        
+            ld 		C, (HL)                    
+            inc 	HL                        
+            ld 		B, (HL)                    
+            ret                           
+    
+; LOAD_FROM_RAM - 8422
+LOAD_FROM_RAM:    
+            call 	SET_FAST                    
+            ld 		HL, VERSN                 
+LOADLOOP    call 	LOADBYTES                     
+            call 	LOAD_SAVE                   
+            jr 		LOADLOOP                        
+LOADBYTES   ld 		A, (BC)                    
+            ld 		(HL), A                    
+            inc 	BC                        
+            ret                           
+    
+; FULL_LOAD_RAM - 8440
+FULL_LOAD_RAM:    
+            call 	POINTER_TO_LOAD                   
+            call 	LOAD_FROM_RAM                   
+            ret                           
+    
+; FULL_SAVE_RAM - 8447
+FULL_SAVE_RAM:    
+            call 	CHECK_SPACE_FOR_SAVE       ; call 8313
+            ld 		A, B                       
+            or 		C                          
+            ret 	z                         
+            call 	PREPARE_SAVE               ; call 8338
+            call 	SAVE_TO_RAM                ; call 8371
+            call 	UPDATE_POINTER             ; call 8389
+            ret                           
+    
+; GET_FILE_LENGTH - 8463 
+GET_FILE_LENGTH:    
+            call 	POINTER_TO_LOAD            ; call 8400
+            ld 		HL, 0xb                    
+            add 	HL, BC                    
+            ld 		C, (HL)                    
+            inc 	HL                        
+            ld 		B, (HL)                    
+            ld 		DE, VERSN                  
+            ld 		H, B                       
+            ld 		L, C                       
+            or 		A                          
+            sbc 	HL, DE                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret                           
+    
+; CHK_RAM1 - 8484
+CHK_RAM1:    
+            ld 		HL, QROM1                 
+            ld 		B, 0x20                    
+            jr 		CALCXOR                      
+    
+; CHK_RAM3 - 8491
+CHK_RAM3:
+            ld 		HL, RAM31                 
+            ld 		B, 0x40                       
+            jr 		CALCXOR                       
+    
+; CHK_RAM4 - 8498
+CHK_RAM4:    
+            ld 		HL, 49152                  
+            ld 		B, 0x40                    
+CALCXOR     ld 		C, 0x0                     
+            xor 	A                         
+;
+XORLOOP     xor 	(HL)                      
+            inc 	HL                        
+            dec 	C                         
+            jr 		nz, XORLOOP                   
+            djnz 	XORLOOP                     
+            ld 		B, 0x0                     
+            ld 		C, A                       
+            ret                           
+    
+; WRITE_OUT - 8517
+WRITE_OUT:    
+            ld 		A, (OUTREG)                
+            out 	(OUTPORT), A                 
+            ret                           
+    
+; BEEP - 8523 (REQUIRES TONE LENGTH IN HL)
+BEEP_VAR:    
+            ld 		A, (OUTREG)                
+            or 		0x8                        
+            out 	(OUTPORT), A                 
+            ld 		L, 0x0                     
+BEEPLOOP    dec 	L                         
+            jr 		nz, BEEPLOOP                   
+            dec 	H                         
+            jr 		nz, BEEPLOOP                   
+            ld 		A, (OUTREG)                
+            out 	(OUTPORT), A                 
+            ret    
+            
+; QUICK_SET_BANK1 - 8545
+            ORG		8545
+QUICK_SET_BANK1:
+            CALL	SET_BANK1
+            RET 
+            
+; QUICK_SET_BANK0 - 8550
+            ORG		8550
+QUICK_SET_BANK0:
+            CALL	SET_BANK0
+            RET  
+            
+; QUICK_FILE_LOAD - 8555
+            ORG		8555
+QUICK_FILE_LOAD:            
+            CALL	FULL_FILE_LOAD
+            RET
+            
+; QUICK_INIT_EEPROM - 8560
+            ORG		8560
+QUICK_INIT_EEPROM:            
+            CALL	INIT_EEPROM
+            RET
+            
+; QUICK_DELETE_LAST_F - 8565  
+            ORG		8565
+QUICK_DELETE_LAST_F:            
+            CALL	FULL_FILE_DEL
+            RET
+
+; QUICK LOAD_FROM_TAPE_TO RAM - 8570
+            ORG		8570
+QUICK_LOAD_FROM_TAPE_TO:
+            CALL	TAPE_TO_RAM
+            RET
+
+; QUICK_SAVE - 8575   
+            ORG		8575
+QUICK_SAVE:            
+            CALL	FULL_FILE_SAVE
+            RET
+
+; QUICK CODE_XOR - 8580
+            ORG		8580
+QUICK_CODE_XOR:
+            CALL	CODE_XOR
+            RET
+
+; QUICK_UPDATE_AFTER_LOAD_RAM - 8585
+            ORG		8585
+QUICK_UPDATE_AFTER_LOAD:
+            CALL	UPDATE_AFTER_LOAD
+            RET
+            
+; START->
+            ORG		8597
+            
+            DEFB	0x53
+            DEFB	0x54
+            DEFB	0x41
+            DEFB	0x52
+            DEFB	0x54
+            DEFB	0x2d
+            DEFB	0x3e
+
+            	
+            
+; COPY QROM_CODE_LENGTH FROM 1 REM TO 8192 (8604)
+            call 	16578                 ; ROUTINE IN 1 REM TO CLEAR QROM 
+            ld 		HL, REM_1_CODE        
+            ld 		DE, QROM1                
+            ld 		BC, QROM_CLEN             
+            ldir                          
+            ret                           
+    
+; DELETE_LAST_F_RAMDISK - 8619
+DELETE_LAST_F:    
+            ld 		HL, NOOFFILES                 
+            ld 		A, (HL)                    
+            inc 	HL                        
+            cp 		(HL)                       
+            jr 		nz, EXITDEL                   
+            call 	POINTER_TO_LOAD                   
+            ld 		H, B                       
+            ld 		L, C                       
+            ld 		(RAM31), HL               
+            ld 		A, (NOOFFILES)                
+            dec 	A                         
+            ld 		(NOOFFILES), A                
+            ld 		A, (FILE_NO)                
+            dec 	A                         
+            ld 		(FILE_NO), A                
+EXITDEL		ret                           
+    
+; ENABLE_WRITE - 8650
+ENABLE_WRITE:    
+            ld 		A, (OUTREG)                
+            or 		0x4                        
+            ld 		(OUTREG), A                
+            call 	OUTTOPORT                   
+            ret                           
+    
+; DISABLE_WRITE - 8662
+DISABLE_WRITE:    
+            ld 		A, (OUTREG)                
+            and 	0xfb                      
+            ld 		(OUTREG), A                
+            call 	OUTTOPORT                   
+            ret                           
+    
+; SET_BANK1 - 8674
+SET_BANK1:    
+            ld 		A, (OUTREG)                
+            or 		0x1                        
+            ld 		(OUTREG), A                
+            call 	OUTTOPORT                   
+            ret                           
+    
+; SET_BANK0 - 8686
+SET_BANK0:    
+            ld 		A, (OUTREG)                
+            and 	0xfe                      
+            ld 		(OUTREG), A                
+            call 	OUTTOPORT                  
+            ret                           
+;  
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+    
+; CLEAR_8192B (ADDR IN HL) - 8704
+CLEAR_8192:    
+            xor 	A                         
+            ld 		(HL), A                    
+            ld 		D, H                       
+            ld 		E, L                       
+            inc 	DE                        
+            ld 		BC, 0x1fff                 
+            ldir                          
+            ret                           
+    
+; COPY ROM (0) TO UPPER RAM (61440) - 8715
+COPY0TOHR:    
+            ld 		HL, 0x0                    
+            ld 		DE, VDISKTOP                 
+            ld 		BC, 0x1000                 
+            ldir                          
+            ret                           
+    
+; COPY UPPER RAM (61440) TO ROM (0) - 8727
+COPYHRTO0:    
+            ld 		HL, VDISKTOP                 
+            ld 		DE, 0x0                    
+            ld 		BC, 0x1000                 
+            ldir                          
+            ret                           
+    
+; CLEAR 32768 TO 65535 - 8739
+CLEAR_HRAM:    
+            ld 		HL, 0x8000                 
+            call 	CLEAR_8192                   
+            ld 		HL, 0xa000                 
+            call 	CLEAR_8192                   
+            ld 		HL, 0xc000                 
+            call 	CLEAR_8192                   
+            ld 		HL, 0xe000                 
+            call 	CLEAR_8192                   
+            ret                           
+    
+; XOR 32768 TO 65535 - 8764
+XOR_HRAM:    
+            ld 		HL, RAM31                 
+            ld 		B, 0x80                    
+            ld 		C, 0x0                     
+XOR_SUB     xor 	A                         
+LA81        xor 	(HL)                      
+            inc 	HL                        
+            dec 	C                         
+            jr 		nz, LA81                   
+            djnz 	LA81                     
+            ld 		B, 0x0                     
+            ld 		C, A                       
+            ret                           
+
+; BEEP - 8783
+BEEP:
+            ld 		B, 0x5                     
+            ld 		A, (OUTREG)                
+            set 	3, A                      
+            out 	(OUTPORT), A                 
+            ld 		C, 0x0                     
+BEEPLOOP1   dec 	C                         
+            jr 		nz, BEEPLOOP1                  
+            djnz 	BEEPLOOP1                    
+            res 	3, A                      
+            out 	(OUTPORT), A                 
+            ret                           
+
+; RAM0_4096_ON - 8804
+RAM0ON:    
+            ld 		A, (OUTREG)                
+            set 	1, A                      
+            out 	(OUTPORT), A                 
+            ld 		(OUTREG), A                
+            ret                           
+    
+; RAM0_4096_OFF - 8815   
+RAM0OFF:    
+            ld 		A, (OUTREG)                
+            res 	1, A                      
+            out 	(OUTPORT), A                 
+            ld 		(OUTREG), A                
+            ret                           
+    
+; SAFELY_ENABLE_RAM0-4096 (&COPY) - 8826
+SAFELY_EN_RAM0_C:    
+            call 	FAST                    
+            call 	RAM0ON                   
+            call 	BEEP                   
+            call 	COPYHRTO0                   
+            call 	BEEP                   
+            call 	SLOW                    
+            ret                           
+    
+; SAFELY ENABLE RAM0-4096 (NO COPY) - 8845
+SAFELY_EN_RAM0:    
+            call 	FAST                    
+            call 	RAM0ON                   
+            call 	SLOW                    
+            ret                           
+    
+; READ PORT 127 - 8855
+READPORT:    
+            in 		A, (OUTPORT)                  
+            ld 		C, A                       
+            ld 		B, 0x0                     
+            ret                           
+    
+; OUT (8194) TO PORT 127 - 8861
+OUTTOPORT:    
+            ld 		A, (OUTREG)                
+            out 	(OUTPORT), A                 
+            ret                           
+    
+; CODE AREA XOR - 8867
+CODE_XOR:    
+            ld 		HL, CODEAREA                 
+            ld 		BC, QROM_CLEN                 
+            call 	XOR_SUB                   
+            ret                           
+    
+; SUSPEND - 8877
+SUSPEND:    
+            call 	FAST                     
+            xor 	A                         
+            ld 		(0x0), A                   
+            ld 		A, 0xf5                    
+            ld 		(0x1), A                   
+            ld 		A, 0xc3                    
+            ld 		(0x2), A                   
+            ld 		A, 0xe2                    
+            ld 		(0x3), A                   
+            ld 		A, 0x22                    
+            ld 		(0x4), A                   
+            di                            
+SUSPLOOP   	jr 	    SUSPLOOP                     
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+            xor 	A                         
+            or 		0x8                        
+            out 	(OUTPORT), A                 
+            ld 		B, 0x50                    
+            ld 		C, 0x0                     
+SSLOOP   	dec 	C                         
+            jr 		nz, SSLOOP                  
+            djnz 	SSLOOP                    
+            and 	0xf7                      
+            out 	(OUTPORT), A                 
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+            nop                           
+            pop 	AF                        
+            out 	(0xfd), A                 
+            ld 		BC, 0x7fff                 
+            nop                           
+            nop                           
+            nop                           
+            jp 		0x3cb                      
+            nop                           
+            nop                           
+            nop                           
+    
+; INIT RAM 32768-65535 - 8950
+INIT_RAM_FULL:    
+            call 	ENABLE_WRITE                  
+            call 	CLEAR_HRAM                   
+            call 	INIT_RAM3                   
+            call 	COPY0TOHR                   
+            call 	DISABLE_WRITE                   
+            ret                           
+            nop                           
+            nop                           
+    
+; FILE NO (8195)->(32771) - 8968
+FILE_NO_COPY:    
+            ld 		A, (FILEREG)                
+            or 		A                          
+            jr 		z, IFZERO                   
+            ld 		HL, NOOFFILES                 
+            cp 		(HL)                       
+            jr 		z, IFOK                   
+            jr 		c, IFOK                   
+IFZERO      push 	HL                       
+            ld 		HL, (D_FILE)               
+            inc 	HL                        
+            ld 		(HL), 0x2a                 
+            inc 	HL                        
+            ld 		(HL), 0x37                 
+            inc 	HL                        
+            ld 		(HL), 0x37                 
+            inc 	HL                        
+            ld 		(HL), 0x34                 
+            inc 	HL                        
+            ld 		(HL), 0x37                 
+            pop 	HL                        
+            ret                           
+IFOK        ld 		C, A                       
+            inc 	HL                        
+            call 	ENABLE_WRITE                   
+            ld 		A, C                       
+            ld 		(HL), A                    
+            call 	DISABLE_WRITE                   
+            ld 		HL, (D_FILE)               
+            inc 	HL                        
+            ld 		(HL), 0x34                 
+            inc 	HL                        
+            ld 		(HL), 0x30                 
+            ret                           
+              
+; ZX81 I2C 7-bit scanner and device reader (bit-banged)
+; Port 127, open-drain via transistors (INVERTED):
+;   OUT bit = 1  -> transistor ON  -> line LOW
+;   OUT bit = 0  -> transistor OFF -> line released HIGH (pull-up)
+; 
+; SDA = bit 4 (mask 16)
+; SCL = bit 5 (mask 32)
+; 
+; Found 7-bit addresses are stored at 8196,8197,... (0x2004+)
+; Returns: BC = number of devices found (B=0, C=count)
+
+;            ORG     9023
+
+SDA_M       EQU     16 
+SCL_M       EQU     32 
+
+START7      EQU     8 ; first address to probe (0x08)
+END7P1      EQU     127 ; 
+
+; ------------------------------------------------------------
+; I2C START: SDA goes low while SCL high, then pull SCL low
+; (remember: driving low means setting the bit to 1)
+
+; I2C_START - 9023
+I2C_START:           
+; ensure both released high
+            LD 		A, (OUTREG)
+            OUT     (OUTPORT),A 
+            NOP
+; SDA low while SCL high
+            SET		4,A 
+            OUT     (OUTPORT),A 
+;            NOP
+; SCL low
+            SET		5,A
+            OUT     (OUTPORT),A  
+            RET      
+
+; ------------------------------------------------------------
+; I2C STOP: SDA goes high while SCL high
+; start state assumed: SCL low, SDA low (both driven low)
+
+; I2C_STOP - 9038
+I2C_STOP:            
+; ensure SDA low, SCL low
+            SET		4,A
+            SET		5,A
+            OUT     (OUTPORT),A 
+            NOP 
+; release SCL high
+            RES		5,A 
+            OUT     (OUTPORT),A 
+            NOP
+; release SDA high while SCL high
+            RES		4,A 
+            OUT     (OUTPORT),A  
+            RET      
+
+; ------------------------------------------------------------
+; Write 1 bit from carry (C=1 => send "1" => release SDA high)
+; Clock is a pulse on SCL: high (released) then low (driven)
+; ------------------------------------------------------------
+; Write byte in D, MSB first, then read ACK.
+; Returns:
+;   A = (IN(OUTPORT) & SDA_M)
+;   Z set if ACK (A=0), NZ if NACK (A!=0)
+
+; I2C_WBYTE_ACK - 9055
+I2C_WBYTE_ACK:  
+            PUSH 	DE
+            LD		E,B
+            LD      B,8 			; LICZNIK WYSYLANYCH BITOW
+WB_LOOP:             
+            RL      D 				; bit into carry (MSB first if D loaded as such)
+            JR      C,WBIT_1               
+            SET		4,A 			; drive SDA low
+            JR      WBIT_DO 
+WBIT_1:              
+            RES		4,A 			; release SDA high
+WBIT_DO:             
+            OUT     (OUTPORT),A 
+            
+; SCL high (release)
+            RES		5,A 
+            OUT     (OUTPORT),A 
+
+; SCL low (drive)
+            SET		5,A
+            OUT     (OUTPORT),A   
+            DJNZ    WB_LOOP
+            LD		B,E
+
+; release SDA for ACK
+            RES		4,A 
+            OUT     (OUTPORT),A 
+
+; SCL high (release) and sample SDA
+            RES		5,A 
+            OUT     (OUTPORT),A 
+            LD		E,A
+            IN      A,(OUTPORT) 
+            AND     SDA_M			; A=0 => ACK
+            LD      A,E 			; keep result
+; SCL low (drive) to finish ACK clock
+            SET		5,A 
+            OUT     (OUTPORT),A 
+            POP		DE
+            RET  					; Z flag valid
+            
+; --- read byte, then ACK (master ACK = SDA low during 9th clock) ---
+
+; I2C_RBYTE_ACK - 9102
+I2C_RBYTE_ACK:
+            CALL I2C_RBYTE_CORE
+; send ACK = SDA low
+            SET		4,A
+            OUT		(OUTPORT),A
+            RES		5,A            ; SCL high (release)
+            OUT		(OUTPORT),A
+            SET		5,A            ; SCL low (drive)
+            OUT		(OUTPORT),A
+            RES		4,A            ; release SDA
+            OUT		(OUTPORT),A
+            RET
+
+; --- read byte, then NACK (master NACK = SDA released during 9th clock) ---
+
+; I2C_RBYTE_NACK - 9122
+I2C_RBYTE_NACK:
+            CALL I2C_RBYTE_CORE
+; send NACK = SDA released
+            RES		4,A
+            OUT		(OUTPORT),A
+            RES		5,A            ; SCL high
+            OUT		(OUTPORT),A
+            SET		5,A            ; SCL low
+            OUT		(OUTPORT),A
+            RET
+
+; --- core: shift in 8 bits MSB-first into D -----------------
+; ------------------------------------------------------------
+; --- I2C_RBYTE_CORE MODIFIED TO SAVE B REGISTER -------------
+
+; I2C_RBYTE_CORE - 9138
+I2C_RBYTE_CORE:
+            LD		D,0				; ADRES 9138
+            LD		E,B
+            LD		B,8
+RB1:
+            RES		4,A            	; release SDA so slave can drive it
+            OUT		(OUTPORT),A
+            RES		5,A           	; SCL high (release)
+            OUT		(OUTPORT),A
+            PUSH	AF
+            SLA		D             	; D <<= 1
+            IN		A,(OUTPORT)     ; sample SDA on bit4
+            BIT		4,A
+            JR		Z,RB0
+            INC		D
+RB0:
+            POP		AF            
+            SET		5,A            ; SCL low (drive)
+            OUT		(OUTPORT),A
+            DJNZ	RB1
+            LD		B,E
+            RET
+; ------------------------------------------------------------ 
+
+; I2C_SCAN - 9170
+I2C_SCAN:   
+            CALL    3875
+; next two instructions disabled, i2c lines are released by I2C_START
+;            LD		A,0
+;            OUT     (OUTPORT),A 	; release SDA,SCL (both high)
+            NOP
+            NOP
+            NOP
+            NOP
+
+            LD      C,START7 		; C = current 7-bit address
+            LD      HL,LISTPTR 		; output list pointer
+            LD      E,0 			; count found
+
+ADDR_LOOP:           
+            LD      A,C 
+            ADD     A,A 			; A = addr<<1
+            LD      D,A 			; D = address byte (write=0)
+            CALL    I2C_START
+            CALL    I2C_WBYTE_ACK 	; Z=ACK
+            JR      NZ,NOACK 
+            LD      (HL),C 
+            INC     HL 
+            INC     E 
+NOACK:               
+            CALL    I2C_STOP 
+            INC     C 
+            LD      A,C 
+            CP      END7P1 
+            JR      NZ,ADDR_LOOP 
+            LD      B,0 
+            LD      C,E 
+            CALL    3883
+            RET 
+; ------------------------------------------------------------ 
+; Read 7 bytes of data from DS3221
+
+; READ_7B_DS3231 - 9214
+READ_RTC_7:
+            CALL    FAST
+            LD		A,0
+            OUT     (OUTPORT),A ; release SDA,SCL (both high)
+            CALL	I2C_START
+            LD		D,0D0h         ; addr 0x68 write
+            CALL	I2C_WBYTE_ACK
+            JR  	NZ,RTC_EXIT            
+
+            LD		D,00h          ; reg 0x00
+            CALL	I2C_WBYTE_ACK    
+            JR      NZ,RTC_EXIT
+            CALL	I2C_START      ; repeated start
+            LD		D,0D1h         ; addr 0x68 read
+            CALL	I2C_WBYTE_ACK
+            JR      NZ,RTC_EXIT
+            LD		HL,I2CPTR
+            CALL	I2C_RBYTE_ACK  ; sec
+            LD		(HL),D
+            INC		HL
+            CALL	I2C_RBYTE_ACK  ; min
+            LD		(HL),D
+            INC		HL
+            CALL	I2C_RBYTE_ACK  ; hour
+            LD		(HL),D
+            INC		HL
+            CALL	I2C_RBYTE_ACK  ; day
+            LD		(HL),D
+            INC		HL
+            CALL	I2C_RBYTE_ACK  ; date
+            LD		(HL),D
+            INC		HL
+            CALL	I2C_RBYTE_ACK  ; month
+            LD		(HL),D
+            INC		HL
+            CALL	I2C_RBYTE_NACK ; year (last)
+            LD		(HL),D
+RTC_EXIT:
+            CALL	I2C_STOP
+            CALL    SLOW 
+            
+; Convert 8204..8211 in place: mask bit7 + BCD->BIN
+
+; CONV_BCD2BIN - 9291
+CONV_BCD2BIN:
+            LD      HL,I2CPTR
+            LD      B,8
+CVT_LOOP:
+            LD      A,(HL)
+            AND     127                 ; mask bit7
+            CALL    BCD2BIN_A
+            LD      (HL),A
+            INC     HL
+            DJNZ    CVT_LOOP
+            RET
+; -------------------------
+; BCD2BIN_A
+; In:  A = packed BCD (00..99)
+; Out: A = binary (0..99)
+; Trashes: B,C,D,E
+
+; BCD2BIN_A - 9307
+BCD2BIN_A:
+            LD      D,A
+            AND     15                  ; ones
+            LD      E,A
+            LD      A,D
+            AND     240                 ; tens<<4
+            RRCA
+            RRCA
+            RRCA
+            RRCA                        ; tens
+            LD      D,A                 ; tens in D
+            ADD     A,A                 ; 2t
+            LD      C,A                 ; C=2t
+            LD      A,D
+            ADD     A,A                 ; 2t
+            ADD     A,A                 ; 4t
+            ADD     A,A                 ; 8t
+            ADD     A,C                 ; 10t
+            ADD     A,E                 ; +ones
+            RET
+; ------------------------------------------------------------
+; SET_RTC_FULL
+; Input (binary):
+;   (8204) = seconds 0..59
+;   (8205) = minutes 0..59
+;   (8206) = hours   0..23   (24h mode assumed)
+;   (8207) = day of week 1 - 7
+;   (8208) = date 0..31
+;   (8209) = month 0..12 century bit set to 0
+;   (8210) = year 0..99
+; Uses: A,B,C,D,E,HL
+; Requires: I2C_START, I2C_STOP, I2C_WBYTE_ACK (your versions)
+;           OUTPORT=127, SDA on bit4, SCL on bit5 (inverted open drain)
+
+; SET_RTC_FULL - 9328
+SET_RTC_FULL:
+            CALL    FAST            ; FAST
+            
+; Convert 8204..8206 in place: mask bit7 + BIN->BCD
+            LD      HL,I2CPTR
+            LD      B,7
+CVT_LOOP1:
+            LD      A,(HL)
+            AND     127                 ; mask bit7
+            CALL    BIN2BCD
+            LD      (HL),A
+            INC     HL
+            DJNZ    CVT_LOOP1
+            
+            LD		A,0
+            OUT     (OUTPORT),A        ; bus idle (released)
+            
+; SET DS3231 ROUTINE
+
+            CALL    I2C_START
+            LD      D,0D0h          ; 0x68 write
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+
+            LD      D,00h           ; register pointer = 0
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+            LD		HL,I2CPTR
+; seconds
+            LD      D,(HL)
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+            INC		HL
+; minutes
+            LD      D,(HL)
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+            INC		HL
+; hours (24h)         
+            LD      D,(HL)
+            RES		6,D
+            CALL    I2C_WBYTE_ACK
+            JR		NZ,RTC_SET_EXIT
+            INC		HL
+; day of week
+            LD      D,(HL)
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+            INC		HL
+; date
+            LD      D,(HL)
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+            INC		HL
+; month
+            LD      D,(HL)
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,RTC_SET_EXIT
+            INC		HL
+; year
+            LD      D,(HL)
+            CALL    I2C_WBYTE_ACK
+                        
+RTC_SET_EXIT:
+            CALL    I2C_STOP
+            CALL    SLOW            
+            RET
+
+; -------------------------
+; BIN2BCD: A (0..99) -> A (packed BCD)
+; Trashes: B,C
+
+; BIN2BCD - 9425
+BIN2BCD:
+            LD      C,0             ; tens
+B2B_L1: 	CP      10
+            JR      C,B2B_DONE
+            SUB     10
+            INC     C
+            JR      B2B_L1
+B2B_DONE:
+            LD      B,A             ; ones
+            LD      A,C             ; tens
+            ADD     A,A
+            ADD     A,A
+            ADD     A,A
+            ADD     A,A             ; tens<<4
+            OR      B
+            RET
+; ------------------------------------------------------------
+; THIS IS USED TO LOAD TAPE DATA INTO RAMDISK STARTING AT CURRENT RAMDISK SAVE ADDRESS IN 32768
+; ------------------------------------------------------------
+
+; CALCULATE_AND_SAVE_LRAMOFFS - 9444
+CALC_SAVE_LRAMOFFS:
+            LD		DE, 16393
+            LD		HL, (RAM31)
+            OR		A
+            SBC		HL, DE
+            LD		(LRAMOFFS), HL
+            LD		BC, HL
+            RET
+            
+; LOAD_TO_BASIC_AND_RAM - 9459
+LOAD_TO_BASIC_AND_RAM:
+            LD		DE, (LRAMOFFS)
+            ADD		HL, DE
+            LD		(HL), C
+            OR		A
+            SBC		HL, DE
+            CALL	LOAD_SAVE
+            RET
+            
+; ROM_MOD_TO_LOAD_TO_BASIC_AND_RAM - 9472
+ROM_MOD_FOR_LOAD:
+            CALL	SAFELY_EN_RAM0_C
+            LD		HL,897
+            LD		(HL),243
+            INC		HL
+            LD		(HL),36
+            RET            
+
+; LOAD_FROM_TAPE_TO RAM - 9484
+; This load finally fails, but bytes are loaded into current save address of RAMDISK
+TAPE_TO_RAM:
+            CALL	QUICK_SET_BANK1			; enables BANK1
+            CALL	CALC_SAVE_LRAMOFFS		; calculates load offset
+            CALL	ROM_MOD_FOR_LOAD		; enables ROM>RAM0 and modifies load subroutine (calls LOAD_TO_BASIC_AND_RAM - 9459)
+            CALL	ENABLE_WRITE			; enables writing to RAMDISK
+            RET								; now load tape with LOAD ""
+            
+; UPDATE_POINTERS_AFTER_LOAD - 9497			; execute after 9484 to update pointers on RAMDISK
+UPDATE_AFTER_LOAD:
+            CALL	PREPARE_SAVE
+            CALL	GET_FILE_LENGTH
+            LD 		HL, (RAM31)               
+            ADD 	HL, BC                    
+            LD 		(RAM31), HL 
+            CALL	DISABLE_WRITE
+            CALL	RAM0OFF
+            RET 
+; ------------------------------------------------------------            
+; CURRENTLY THERE IS NO < COPY FROM RAMDISK TO EEDISK > ROUTINE.
+; INSTEAD UPDATE POINTERS AFTER LOAD_FROM_TAPE_TO RAM AND THEN LOAD FROM RAMDISK TO BASIC
+; THE LOADED FILE WILL NOT START AUTOMATICALLY SO IT CAN BE SAVED TO EEPROM
+; ------------------------------------------------------------
+
+; WAIT_FOR_KEY_AND_RETURN_CODE_IN_HL - 9517
+WAIT_KEY_HL:
+        CALL    KEYBOARD
+        LD      A,L
+        CP      0FFh
+        JR      NZ,WAIT_KEY_HL
+WK_PR:
+        CALL    KEYBOARD
+        LD      A,L
+        CP      0FFh
+        JR      Z,WK_PR
+        RET    
+
+; FREE SPACE HERE UP TO 9550
+
+            ORG		9550
+; ------------------------------------------------------------
+; EEPROM TEST ROUTINES
+; ------------------------------------------------------------
+
+; TEST_WR - 9550
+TEST_WR:
+            CALL	FAST
+            LD		HL,8212
+            LD		BC,(8213)
+            CALL	EEPROM_ADDR_WRITE_RAM
+            CALL	SLOW
+            RET
+            
+; TEST_RD - 9567            
+TEST_RD:
+            CALL	FAST
+            LD		HL,8212
+            LD		BC,(8213)
+            CALL	EEPROM_ADDR_READ_RAM
+            CALL	SLOW
+            RET
+; ------------------------------------------------------------
+; EEDISK ROUTINES
+; ------------------------------------------------------------
+
+; GET_FREE_EEPROM 9584
+GETFREE:    
+            ld		HL, (MAXEEADDR)               
+            ld		DE, (EEDISK_TAB)               
+            or 		A                          
+            sbc 	HL, DE                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret 	                          
+    
+; CHECK_SPACE_FOR_EESAVE 9597
+CHKSPCEE:    
+            ld 		HL, (E_LINE)               
+            ld 		BC, VERSN                
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ld 		HL, (MAXEEADDR)               
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		BC, (EEDISK_TAB)               
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret     	                      
+    
+; PREPARE EESAVE 9624
+PREPEES:
+            ld 		A, (EENOFILES)                
+            inc 	A                          
+            ld 		(EENOFILES), A                
+            ld 		(EEFILE_NO), A                
+            ld 		E, A                       
+            add 	A, A                      
+            add 	A, E                      
+            ld 		E, A                       
+            ld 		D, 0x0                     
+            ld 		HL, MAXEEADDR                 
+            add 	HL, DE                    
+            ld 		A, (EEFILE_NO)                
+            ld 		(HL), A                    
+            ld 		BC, (EEDISK_TAB)              
+            inc 	HL                        
+            ld 		(HL), C                    
+            inc 	HL                        
+            ld 		(HL), B                    
+            ret                           
+    
+; SAVE_TO_EEPROM 9657 (ADDR IN BC)
+SAVTOEE:    
+            call 	SET_FAST              ; call 0x2e7
+            ld 		HL, VERSN            
+EES         call 	SAVR                 
+            call 	LOAD_SAVE             ; call 0x1fc
+            jr 		EES                       
+SAVR        CALL	EEPROM_ADDR_WRITE_RAM
+            INC 	BC                        
+            ret                           
+    
+; UPDATE_POINTER 9676
+UPDPTREE:    
+            call 	8290                     
+            ld 		HL, (EEDISK_TAB)               
+            add 	HL, BC                    
+            ld 		(EEDISK_TAB), HL               
+            ret		                           
+    
+; POINTER_TO_LOAD 9687 (FILE NO IN 10243)
+PTRTOLDEE:    
+            ld 		A, (EEFILE_NO)                
+            ld 		E, A                       
+            add 	A, A                      
+            add 	A, E                      
+            ld 		E, A                       
+            ld 		D, 0x0                    
+            ld 		HL, MAXEEADDR                 
+            add 	HL, DE                    
+            inc 	HL                        
+            ld 		C, (HL)                    
+            inc 	HL                        
+            ld 		B, (HL)                    
+            ret                          
+    
+; LOAD_FROM_EEPROM 9705
+LDFROMEE:    
+            call 	SET_FAST              ; call 743
+            ld 		HL, VERSN              
+EEL         call 	LDR                     
+            call 	LOAD_SAVE             ; call 508
+            jr 		EEL                        
+LDR         CALL	EEPROM_ADDR_READ_RAM
+            INC 	BC                       
+            ret                           
+    
+; FULL_LOAD_EEPROM 9724
+FULL_LOAD_EEPROM:    
+            call	PTRTOLDEE             
+            call	LDFROMEE              
+            ret                           
+    
+; FULL_SAVE_EEPROM 9731
+FULL_SAVE_EEPROM:    
+            call 	CHKSPCEE                   
+            ld 		A, B                       
+            or 		C                          
+            ret 	z                         
+            call 	PREPEES                   
+            call 	SAVTOEE                   
+            call 	UPDPTREE                   
+            ret                           
+    
+; GET_FILE_LENGTH 9747 
+GET_EEFILE_LEN:    
+            call 	PTRTOLDEE             ; call 9717
+            ld 		HL, 0xb                    
+            add 	HL, BC                    
+            ld 		C, (HL)                    
+            inc 	HL                        
+            ld 		B, (HL)                    
+            ld 		DE, VERSN                 
+            ld 		H, B                       
+            ld 		L, C                       
+            or 		A                          
+            sbc 	HL, DE                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret                           
+            
+; INIT_EEPROM 9768
+INIT_EEPROM:            
+            XOR		A
+            LD		HL,EEDISK_TAB
+            LD		(HL),A
+            INC		HL
+            LD		A,MINEEADDRH
+            LD		(HL),A
+            INC		HL
+            XOR		A
+            LD		(HL),A
+            INC		HL
+            LD		(HL),A
+            INC		HL
+            LD		(HL),A
+            INC		HL
+            LD		(HL),MAXEEADDRH
+            RET
+            
+; DELETE_LAST_F_EEPROM - 9788
+DELETE_LAST_EE:    
+            ld 		HL, EENOFILES                 
+            ld 		A, (HL)                    
+            inc 	HL                        
+            cp 		(HL)                       
+            jr 		nz, EXITDELEE                   
+            call 	PTRTOLDEE                   
+            ld 		H, B                       
+            ld 		L, C                       
+            ld 		(EEDISK_TAB), HL               
+            ld 		A, (EENOFILES)                
+            dec 	A                         
+            ld 		(EENOFILES), A                
+            ld 		A, (EEFILE_NO)                
+            dec 	A                         
+            ld 		(EEFILE_NO), A                
+EXITDELEE	ret 
+
+; ------------------------------------------------------------
+; PCF8574 READ/WRITE CODE ------------------------------------
+; ------------------------------------------------------------
+
+PCF8574_7   EQU 	32
+PCF8574_W   EQU 	PCF8574_7*2   
+PCF8574_R   EQU 	PCF8574_7*2+1 
+ 
+; PCF8574_WRITE - 9819
+PCF8574_WRITE:
+            CALL	FAST
+            LD		HL,PCFPTR
+            LD		A,0
+            OUT     (OUTPORT),A
+
+            CALL    I2C_START
+            LD      D,PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,PCF_FINISH
+
+            LD      D,(HL)            
+            CALL    I2C_WBYTE_ACK
+PCF_FINISH:
+            CALL    I2C_STOP
+            CALL	SLOW
+            RET
+ 
+; PCF8574_READ - 9850
+PCF8574_READ:
+            CALL FAST
+            LD		A,0
+            OUT     (OUTPORT),A
+
+            CALL    I2C_START
+            LD      D,PCF8574_R
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,PCF_FINISR
+            LD		HL,PCFPTR+1
+            CALL    I2C_RBYTE_NACK            
+            LD		(HL),D
+PCF_FINISR:
+            CALL    I2C_STOP
+            CALL	SLOW
+            RET
+            
+; ------------------------------------------------------------
+; SAVE 256B OF EETABLE TO EEPROM------------------------------
+; ------------------------------------------------------------
+
+; EETABLE_SAVE - 9881
+EETABLE_SAVE:
+            CALL	FAST
+            LD		HL,EEDISK_TAB+255
+            LD		B,0
+            LD		C,255
+EESLOOP     CALL	EEPROM_ADDR_WRITE_RAM
+            DEC		HL
+            DEC		C
+            JR		NZ,EESLOOP
+            CALL	EEPROM_ADDR_WRITE_RAM
+            CALL	SLOW
+            RET
+            
+; ------------------------------------------------------------
+; RESTORE 256B OF EETABLE TO EEDISK_TAB-----------------------
+; ------------------------------------------------------------
+
+; EETABLE_RESTORE - 9905
+EETABLE_RESTORE:
+            CALL	FAST
+            LD		HL,EEDISK_TAB+255
+            LD		B,0
+            LD		C,255
+EERLOOP     CALL	EEPROM_ADDR_READ_RAM
+            DEC		HL
+            DEC		C
+            JR		NZ,EERLOOP
+            CALL	EEPROM_ADDR_READ_RAM
+            CALL	SLOW
+            RET
+
+; ------------------------------------------------------------
+; MODIFIES THE ROM LOAD ROUTINE TO LOAD TO SPECIFIED RAM ADDRESS INSTEAD OF 16939
+; TURN ON ROM>RAM BEFORE USING
+; AFTER THIS LOAD "" LOADS TO RAM AND NOT TO 16393
+; IT IS NOT USED ANYMORE, USE < LOAD_FROM_TAPE_TO RAM - 9484 > INSTEAD
+; ------------------------------------------------------------
+;
+; MODIFY_ROM_SAVE_TORAM - 9929
+ROM_MOD:
+            CALL	SAFELY_EN_RAM0_C
+            LD		HL, 511
+            LD		(HL), 11
+            INC		HL
+            LD		(HL),VERSNRAMH
+            LD		HL, 885
+            LD		(HL), 0
+            INC		HL
+            LD		(HL), 0
+            INC		HL
+            LD		(HL), 0
+            LD		HL, 889
+            LD		(HL), 0
+            INC		HL
+            LD		(HL),VERSNRAMH
+            LD		HL,E_LINERAMH
+            LD		(HL), 65
+            RET
+            
+; GET_RAMSAV_LENGTH - 9965    
+GET_RAMSAV_LENGTH:
+            ld 		HL, (E_LINERAM)                
+            ld 		BC, VERSN                  
+            or 		A                          
+            sbc 	HL, BC                    
+            ld 		B, H                       
+            ld 		C, L                       
+            ret                           
+
+; FULL_RAMLOAD - 9977
+FULL_RAMLOAD:    
+            LD		BC,VERSNRAM                   
+            call 	LOAD_FROM_RAM                   
+            ret
+;            
+; ------------------------------------------------------------
+; EEPROM_ADDR_WRITE_RAM EEPROM ADDR READ FROM I2C_ADR_REG
+; Writes 1 byte to EEPROM[BC] from RAM[HL]
+; In:  BC = EEPROM word address, HL = RAM address
+; Trashes: A,D,E
+
+; EEPROM_ADDR_WRITE_RAM - 9984
+EEPROM_ADDR_WRITE_RAM:
+
+            LD		A,(I2C_ADR_REG)
+            SLA		A
+            LD      E,A             ; save data in E
+
+; release SDA/SCL (keeps other bits as read from port)
+; not needed, this is done by I2C_START
+;            LD 		A, (OUTREG)
+;            OUT     (OUTPORT),A
+
+            CALL    I2C_START
+            LD		D,E
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBW_ADDR_FAIL
+
+            LD      D,B             ; word address high
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBW_ADDR_FAIL
+
+            LD      D,C             ; word address low
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBW_ADDR_FAIL
+
+            LD      D,(HL)             ; data byte
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBW_ADDR_FAIL
+
+            CALL    I2C_STOP
+
+; ACK polling (wait until internal write cycle completes)
+EBW_ADDR_POLL:
+            CALL    I2C_START
+            LD		D,E
+            CALL    I2C_WBYTE_ACK
+            CALL    I2C_STOP
+            JR      NZ,EBW_ADDR_POLL
+            RET
+
+EBW_ADDR_FAIL:
+            CALL    I2C_STOP
+            RET
+
+; ------------------------------------------------------------
+; EEPROM_ADDR_READ_RAM EEPROM ADDR READ FROM I2C_ADR_REG
+; Reads 1 byte from EEPROM[HL] into RAM[BC]
+; In:  BC = EEPROM word address, HL = RAM address
+; Trashes: A,D
+
+; EEPROM_ADDR_READ_RAM - 10037
+EEPROM_ADDR_READ_RAM:
+; get current OUTREG state
+
+            LD		A,(I2C_ADR_REG)
+            SLA		A
+            LD		E,A
+
+; dummy write to set address pointer
+            CALL    I2C_START
+            LD		D,E
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBR_ADDR_FAIL
+
+            LD      D,B
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBR_ADDR_FAIL
+
+            LD      D,C
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBR_ADDR_FAIL
+
+; repeated START, switch to read
+            CALL    I2C_START
+            LD      D,E
+            INC		D
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,EBR_ADDR_FAIL
+
+; read one byte, NACK, STOP
+            CALL    I2C_RBYTE_NACK   ; D = data
+            CALL    I2C_STOP
+            LD		(HL),D
+            RET
+
+EBR_ADDR_FAIL:
+            CALL    I2C_STOP
+            RET
+            
+; ------------------------------------------------------------
+; GET_DIGIT_PRESSED_OR_ENTER - 10086
+GET_DIGIT_OR_ENTER:
+            CALL    WAIT_KEY_HL
+            LD		B, 0
+            LD		C, 0
+            ; 0
+            LD      DE,K_0
+            CALL	DO_SBC
+            RET		Z
+            ; 1
+            LD      DE,K_1
+            CALL	DO_SBC
+            LD		C, 1
+            RET		Z
+            ; 2
+            LD      DE,K_2
+            CALL	DO_SBC
+            LD		C, 2
+            RET		Z
+            ; 3
+            LD      DE,K_3
+            CALL	DO_SBC
+            LD		C, 3
+            RET		Z
+            ; 4
+            LD      DE,K_4
+            CALL	DO_SBC
+            LD		C, 4
+            RET		Z
+            ; 5
+            LD      DE,K_5
+            CALL	DO_SBC
+            LD		C, 5
+            RET		Z
+            ; 6
+            LD      DE,K_6
+            CALL	DO_SBC
+            LD		C, 6
+            RET		Z
+            ; 7
+            LD      DE,K_7
+            CALL	DO_SBC
+            LD		C, 7
+            RET		Z
+            ; 8
+            LD      DE,K_8
+            CALL	DO_SBC
+            LD		C, 8
+            RET		Z
+            ; 9
+            LD      DE,K_9
+            CALL	DO_SBC
+            LD		C, 9
+            RET		Z
+            ; ENTER
+            LD      DE,K_ENT
+            CALL	DO_SBC
+            LD		B, 1
+            RET		Z
+            ; not a digit / not ENTER -> wait again
+            JR      GET_DIGIT_OR_ENTER
+
+DO_SBC:								; 10192
+            PUSH    HL
+            OR      A
+            SBC     HL,DE
+            POP     HL
+            RET
+            
+; ------------------------------------------------------------
+; PUT_STR_99 - 10198
+; In:  HL = dest in display file
+;      DE = source bytes terminated by ENDMARK (99)
+; Out: HL advanced past written chars
+; ------------------------------------------------------------
+PUT_STR_99:
+            LD      A,(DE)
+            CP      ENDMARK
+            RET     Z
+            LD      (HL),A
+            INC     HL
+            INC     DE
+            JR      PUT_STR_99
+
+; ------------------------------------------------------------
+; Data (ZX81 character codes), terminated by 99
+; ------------------------------------------------------------
+; MESSAGE_ERROR - 10207
+MSG_ERROR:
+            DEFB    42,55,55,52,55,99
+            
+MSG_OK:
+            DEFB	52,48,99			; 10213
+
+MSG_LOAD_FROM:
+            DEFB 	56,42,49,42,40,57,0,41,55,59,99		; 10216
+            
+MSG_0_EEPROM:
+            DEFB 	28,0,22,0,42,42,53,55,52,50,99		; 10227
+            
+MSG_1_RAMDISK:
+            DEFB 	29,0,22,0,55,38,50,41,46,56,48,99 	; 10238
+            
+MSG_ENTER_FILE_NO:
+            DEFB 	42,51,57,42,55,0,43,46,49,42,0,51,52,27,14,99	;10250
+
+            
+; PRINT_ERROR_LINE1 - 10266
+PRINT_ERR:
+            LD		DE, MSG_ERROR
+            LD		HL, (D_FILE)
+            INC		HL
+            CALL	PUT_STR_99
+            RET
+            
+; PRINT_OK_LINE1 - 10277
+PRINT_OK:
+            LD		DE, MSG_OK
+            LD		HL, (D_FILE)
+            INC		HL
+            CALL	PUT_STR_99
+            RET
+            
+; FILE_LOAD_ROUTINE - 10288
+FULL_FILE_LOAD:
+            CALL	DRV_SELECT
+            LD		HL, LOADSCRT
+            LD		C, (HL)
+            LD		HL, (D_FILE)
+            INC		HL
+            LD		A, C
+            OR		A
+            JR		Z, GETEEPROM
+            LD		DE, MSG_1_RAMDISK
+            CALL	PUT_STR_99
+            JR		PROCEED
+GETEEPROM	LD		DE, MSG_0_EEPROM
+            CALL	PUT_STR_99
+PROCEED		INC		HL
+            LD		DE, MSG_ENTER_FILE_NO
+            CALL	PUT_STR_99
+            CALL	GET_DIGIT_OR_ENTER 
+CHECK_C_IN_RANGE:
+            LD		HL, LOADSCRT
+            LD		D, (HL)
+            LD      A,C
+            OR      A
+            JR     	Z, ERR_EXIT                 ; C==0 -> fail
+
+            LD		A, D
+            OR		A
+            JR		Z, EENO
+            LD		A, (NOOFFILES)
+            CP      C               			; compare A - C
+            JR	    C, ERR_EXIT
+            CALL	ENABLE_WRITE
+            LD		HL, FILE_NO
+            LD		(HL), C
+            CALL	DISABLE_WRITE
+            CALL	FULL_LOAD_RAM
+            RET
+
+EENO        LD      A,(EENOFILES)       		; A = limit
+            CP      C               			; compare A - C
+            JR	    C, ERR_EXIT              	; if A < C -> fail (C > limit)
+            LD		HL, EEFILE_NO
+            LD		(HL), C
+            CALL	FULL_LOAD_EEPROM
+            CALL	EETABLE_RESTORE
+            RET
+            
+ERR_EXIT:
+            CALL	CLS
+            CALL	PRINT_ERR
+            RET
+            
+; SELECT_DRIVE_TO_OPERATE_ON - 10383
+DRV_SELECT:
+            LD		HL, (D_FILE)
+            INC		HL
+            LD		DE, MSG_LOAD_FROM
+            CALL	PUT_STR_99
+            LD		HL, (D_FILE)
+            LD		BC, SCR_LINE2
+            ADD		HL, BC
+            LD		DE, MSG_0_EEPROM
+            CALL	PUT_STR_99
+            LD		HL, (D_FILE)
+            LD		BC, SCR_LINE3
+            ADD		HL, BC
+            LD		DE, MSG_1_RAMDISK
+            CALL	PUT_STR_99
+            CALL	GET_DIGIT_OR_ENTER
+            LD		HL, LOADSCRT
+            LD		(HL), C
+            CALL	CLS
+            RET
+            
+MSG_SURE:
+            DEFB    56,58,55,42,15,99
+
+MSG_NO:
+            DEFB    28,0,22,0,51,52,99
+            
+MSG_YES:
+            DEFB    29,0,22,0,62,42,56,99            
+
+; YES_NO_ROUTINE - 10451
+YES_NO:
+            LD		HL, (D_FILE)
+            INC		HL
+            LD		DE, MSG_SURE
+            CALL	PUT_STR_99
+            LD		HL, (D_FILE)
+            LD		BC, SCR_LINE2
+            ADD		HL, BC
+            LD		DE, MSG_NO
+            CALL	PUT_STR_99
+            LD		HL, (D_FILE)
+            LD		BC, SCR_LINE3
+            ADD		HL, BC
+            LD		DE, MSG_YES
+            CALL	PUT_STR_99
+            CALL	GET_DIGIT_OR_ENTER
+            RET
+
+; FILE_SAVE_ROUTINE - 10491
+FULL_FILE_SAVE:
+            CALL	DRV_SELECT
+            CALL	YES_NO
+            LD		A, C
+            OR		A
+            RET		Z
+            LD		HL, LOADSCRT
+            LD		A, (HL)
+            OR		A
+            JR		Z, SAVEEPROM
+            CALL	CLS            
+            CALL	ENABLE_WRITE
+            CALL	FULL_SAVE_RAM
+            CALL	DISABLE_WRITE
+            RET
+SAVEEPROM:	
+            CALL	CLS
+            CALL	FULL_SAVE_EEPROM
+            CALL	EETABLE_SAVE
+            RET
+            
+; FILE_DEL_ROUTINE - 10530
+
+FULL_FILE_DEL:
+            CALL	DRV_SELECT
+            CALL	YES_NO
+            LD		A, C
+            OR		A
+            RET		Z
+            LD		HL, LOADSCRT
+            LD		A, (HL)
+            OR		A
+            JR		Z, DELEPROM
+            CALL	ENABLE_WRITE
+            LD		HL, NOOFFILES
+            LD		A, (HL)
+            INC		HL
+            LD		(HL), A
+            CALL	DELETE_LAST_F
+            CALL	DISABLE_WRITE
+            CALL	CLS
+            RET
+DELEPROM:	
+            CALL	DELETE_LAST_EE
+            CALL	EETABLE_SAVE
+            CALL	CLS
+            RET            
+
+; ------------------------------------------------------------
+; OLED SH1106 TEST ROUTINES
+; ------------------------------------------------------------
+; OLED_TEST_ROUTINE - 10575
+OLED_TEST:
+            CALL	OLED_INIT
+            CALL	OLED_CLEARBUF
+            LD   	HL,MSGOLED
+            LD   	B,0          ; page 0
+            LD   	C,0          ; x=0
+            CALL 	OLED_PUTS_PAGE
+            CALL 	OLED_FLUSH
+            RET
+MSGOLED    	DB		"ZX81 RTC:",0
+
+; ------------------------------------------------------------
+; OLED SH1106 CONTROL ROUTINES
+; ------------------------------------------------------------
+; ----------------- constants -----------------
+
+OLED_7BIT   EQU     03Ch
+OLED_W      EQU     OLED_7BIT*2		   ; 0x78
+
+FB          EQU     14336              ; 
+FB_SIZE     EQU     1024               ; 128*64/8
+XSHIFT      EQU     2                  ; typical SH1106 128x64 shift
+
+; Your existing I2C primitives must exist:
+;   I2C_START
+;   I2C_STOP
+;   I2C_WBYTE_ACK        ; sends byte in D, returns Z=ACK, NZ=NACK
+; They manage SDA/SCL on port 127 bits 4/5 as you already do.
+
+; ------------------------------------------------------------
+; Public entry points:
+;   OLED_INIT
+;   OLED_CLEARBUF
+;   OLED_FLUSH
+;   OLED_PUTS_PAGE       ; page-aligned text write into framebuffer
+; ------------------------------------------------------------
+
+OLED_INIT:
+            ; Display OFF
+            LD      D,0AEh
+            CALL    OLED_CMD
+
+            ; A common SH1106 init sequence (128x64)
+            ; (DC-DC on: 0xAD 0x8B) :contentReference[oaicite:3]{index=3}
+            LD      HL,OLED_INIT_TAB
+            LD      B,OLED_INIT_TAB_LEN
+OI1:        LD      D,(HL)
+            INC     HL
+            CALL    OLED_CMD
+            DJNZ    OI1
+
+            ; Display ON
+            LD      D,0AFh
+            CALL    OLED_CMD
+            RET
+
+OLED_INIT_TAB:
+            ; clock div, multiplex, display offset, start line
+            DB 0D5h,080h
+            DB 0A8h,03Fh
+            DB 0D3h,000h
+            DB 040h
+            ; DC-DC on (SH1106)
+            DB 0ADh,08Bh
+            ; segment remap, COM scan dir
+            DB 0A1h
+            DB 0C8h
+            ; COM pins, contrast
+            DB 0DAh,012h
+            DB 081h,07Fh
+            ; precharge, VCOM detect
+            DB 0D9h,022h
+            DB 0DBh,020h
+            ; resume RAM, normal (not inverted)
+            DB 0A4h
+            DB 0A6h
+OLED_INIT_TAB_LEN     EQU ($-OLED_INIT_TAB)
+
+; ------------------------------------------------------------
+; Send 1 command byte in D (uses control byte 0x00) :contentReference[oaicite:4]{index=4}
+;OLED_CMD:
+;            CALL    I2C_START
+;            LD      D,OLED_W
+;            CALL    I2C_WBYTE_ACK
+            ; (optionally handle NACK)
+;            LD      D,00h            ; control = command
+;            CALL    I2C_WBYTE_ACK
+            ; D already holds command? No, we overwrote it, so restore:
+            ; Caller must put command in E if you want; simplest: use E internally.
+            ; We'll implement with E as scratch:
+            ; ----
+            ; This wrapper expects the command in D on entry; we saved nothing.
+            ; So: use E in callers or call OLED_CMD2 below.
+            ; ----
+            ; If you prefer: call OLED_CMD2 and keep OLED_CMD unused.
+;            CALL    I2C_STOP
+;            RET
+
+; Use this variant: command byte in D on entry, safe
+OLED_CMD:
+            LD      E,D              ; save command
+            CALL    I2C_START
+            LD      D,OLED_W
+            CALL    I2C_WBYTE_ACK
+            LD      D,00h
+            CALL    I2C_WBYTE_ACK
+            LD      D,E              ; restore command
+            CALL    I2C_WBYTE_ACK
+            CALL    I2C_STOP
+            RET
+
+; Update callers to use OLED_CMD2:
+; (To keep the listing consistent, alias OLED_CMD to OLED_CMD2)
+            ; fallthrough alias not possible in all assemblers:
+            ; just use OLED_CMD2 below in calls
+
+; ------------------------------------------------------------
+; Clear framebuffer (fill with 0)
+OLED_CLEARBUF:
+            LD      HL,FB
+            LD      (HL),0
+            LD      DE,FB+1
+            LD      BC,FB_SIZE-1
+            LDIR
+            RET
+
+; ------------------------------------------------------------
+; Set SH1106 page+column in one command transaction
+; In:  B=page (0..7), C=x (0..127)
+OLED_SETPOS:
+            ; col = x + XSHIFT
+            LD      A,C
+            ADD     A,XSHIFT
+            LD      C,A              ; C = col (0..131)
+
+            CALL    I2C_START
+            LD      D,OLED_W
+            CALL    I2C_WBYTE_ACK
+            LD      D,00h            ; control=command
+            CALL    I2C_WBYTE_ACK
+
+            ; 0xB0|page
+            LD      A,B
+            OR      0B0h
+            LD      D,A
+            CALL    I2C_WBYTE_ACK
+
+            ; low nibble
+            LD      A,C
+            AND     0Fh
+            LD      D,A
+            CALL    I2C_WBYTE_ACK
+
+            ; high nibble (0x10 | (col>>4))
+            LD      A,C
+            RRCA
+            RRCA
+            RRCA
+            RRCA
+            AND     0Fh
+            OR      10h
+            LD      D,A
+            CALL    I2C_WBYTE_ACK
+
+            CALL    I2C_STOP
+            RET
+
+; ------------------------------------------------------------
+; Flush framebuffer to OLED (8 pages x 128 bytes) :contentReference[oaicite:5]{index=5}
+OLED_FLUSH:
+            LD      B,0              ; page=0
+            LD      HL,FB
+OF_PAGE:
+            ; set pos to x=0
+            LD      C,0
+            PUSH    HL
+            PUSH    BC
+            CALL    OLED_SETPOS
+            POP     BC
+            POP     HL
+
+            ; data transaction: control=0x40, then 128 bytes :contentReference[oaicite:6]{index=6}
+            CALL    I2C_START
+            LD      D,OLED_W
+            CALL    I2C_WBYTE_ACK
+            LD      D,040h           ; control=data
+            CALL    I2C_WBYTE_ACK
+
+            LD      E,128
+OF_B:       LD      D,(HL)
+            INC     HL
+            CALL    I2C_WBYTE_ACK
+            DEC     E
+            JR      NZ,OF_B
+
+            CALL    I2C_STOP
+
+            INC     B
+            LD      A,B
+            CP      8
+            JR      NZ,OF_PAGE
+            RET
+
+; ------------------------------------------------------------
+; Page-aligned text into framebuffer
+; In:  HL -> 0-terminated ASCII string
+;      B  = page (0..7)
+;      C  = x (0..127), should leave room (each char = 8 columns)
+OLED_PUTS_PAGE:
+OP_CH:      LD      A,(HL)
+            OR      A
+            RET     Z
+            INC     HL
+            PUSH    HL
+            PUSH    BC
+            CALL    OLED_PUTC_PAGE
+            POP     BC
+            POP     HL
+            LD      A,C
+            ADD     A,8
+            LD      C,A
+            JR      OP_CH
+
+; Draw one 8x8 glyph to framebuffer at (page=B, x=C)
+; In: A = ASCII char (supports '0'-'9','A'-'Z',' ',':','-')
+OLED_PUTC_PAGE:
+            ; map ASCII to font index in A
+            CP      '0'
+            JR      C,OPC_SP
+            CP      '9'+1
+            JR      NC,OPC_AZ
+            SUB     '0'              ; 0..9
+            JR      OPC_IDX
+
+OPC_AZ:     CP      'A'
+            JR      C,OPC_SP
+            CP      'Z'+1
+            JR      NC,OPC_PUN
+            SUB     'A'
+            ADD     A,10             ; 10..35
+            JR      OPC_IDX
+
+OPC_PUN:    CP      ':'
+            JR      NZ,OPC_DASH
+            LD      A,37
+            JR      OPC_IDX
+OPC_DASH:   CP      '-'
+            JR      NZ,OPC_SP
+            LD      A,38
+            JR      OPC_IDX
+
+OPC_SP:     LD      A,36             ; space
+
+OPC_IDX:
+            ; font offset = index * 8
+            LD      L,A
+            LD      H,0
+            ADD     HL,HL
+            ADD     HL,HL
+            ADD     HL,HL            ; *8
+            LD      DE,FONT8
+            ADD     HL,DE            ; HL = &FONT8[index*8]
+
+            ; dst = FB + page*128 + x
+            LD      A,B
+            LD      E,A
+            LD      D,0
+            ; DE = page
+            ; multiply by 128: page<<7 (7 shifts)
+            SLA     E
+            RL      D
+            SLA     E
+            RL      D
+            SLA     E
+            RL      D
+            SLA     E
+            RL      D
+            SLA     E
+            RL      D
+            SLA     E
+            RL      D
+            SLA     E
+            RL      D               ; now DE = page*128
+
+            LD      IX,FB
+            ADD     IX,DE
+            LD      E,C
+            LD      D,0
+            ADD     IX,DE           ; IX = dst
+
+            ; copy 8 columns
+            LD      E,8
+OPC_CP:     LD      A,(HL)
+            LD      (IX+0),A
+            INC     HL
+            INC     IX
+            DEC     E
+            JR      NZ,OPC_CP
+            RET
+
+; ------------------------------------------------------------
+; 8x8 font, column-major (1 byte = 8 vertical pixels)
+; indices:
+;  0-9   = '0'..'9'
+; 10-35  = 'A'..'Z'
+; 36     = ' '
+; 37     = ':'
+; 38     = '-'
+FONT8:
+; '0'..'9'
+            DB 3Ch,42h,46h,4Ah,52h,62h,42h,3Ch
+            DB 08h,18h,28h,08h,08h,08h,08h,3Eh
+            DB 3Ch,42h,02h,04h,18h,20h,40h,7Eh
+            DB 7Eh,02h,04h,1Ch,02h,02h,42h,3Ch
+            DB 04h,0Ch,14h,24h,44h,7Eh,04h,04h
+            DB 7Eh,40h,7Ch,02h,02h,02h,42h,3Ch
+            DB 1Ch,20h,40h,7Ch,42h,42h,42h,3Ch
+            DB 7Eh,02h,04h,08h,10h,10h,10h,10h
+            DB 3Ch,42h,42h,3Ch,42h,42h,42h,3Ch
+            DB 3Ch,42h,42h,42h,3Eh,02h,04h,38h
+; 'A'..'Z'
+            DB 18h,24h,42h,42h,7Eh,42h,42h,42h ; A
+            DB 7Ch,42h,42h,7Ch,42h,42h,42h,7Ch ; B
+            DB 3Ch,42h,40h,40h,40h,40h,42h,3Ch ; C
+            DB 78h,44h,42h,42h,42h,42h,44h,78h ; D
+            DB 7Eh,40h,40h,7Ch,40h,40h,40h,7Eh ; E
+            DB 7Eh,40h,40h,7Ch,40h,40h,40h,40h ; F
+            DB 3Ch,42h,40h,40h,4Eh,42h,42h,3Ch ; G
+            DB 42h,42h,42h,7Eh,42h,42h,42h,42h ; H
+            DB 3Eh,08h,08h,08h,08h,08h,08h,3Eh ; I
+            DB 1Eh,04h,04h,04h,04h,44h,44h,38h ; J
+            DB 42h,44h,48h,70h,48h,44h,42h,42h ; K
+            DB 40h,40h,40h,40h,40h,40h,40h,7Eh ; L
+            DB 42h,66h,5Ah,5Ah,42h,42h,42h,42h ; M
+            DB 42h,62h,52h,4Ah,46h,42h,42h,42h ; N
+            DB 3Ch,42h,42h,42h,42h,42h,42h,3Ch ; O
+            DB 7Ch,42h,42h,7Ch,40h,40h,40h,40h ; P
+            DB 3Ch,42h,42h,42h,42h,4Ah,44h,3Ah ; Q
+            DB 7Ch,42h,42h,7Ch,48h,44h,42h,42h ; R
+            DB 3Ch,42h,40h,3Ch,02h,02h,42h,3Ch ; S
+            DB 7Fh,08h,08h,08h,08h,08h,08h,08h ; T
+            DB 42h,42h,42h,42h,42h,42h,42h,3Ch ; U
+            DB 42h,42h,42h,42h,42h,24h,18h,18h ; V
+            DB 42h,42h,42h,42h,5Ah,5Ah,66h,42h ; W
+            DB 42h,42h,24h,18h,18h,24h,42h,42h ; X
+            DB 42h,42h,24h,18h,08h,08h,08h,08h ; Y
+            DB 7Eh,02h,04h,08h,10h,20h,40h,7Eh ; Z
+; ' ', ':', '-'
+            DB 00h,00h,00h,00h,00h,00h,00h,00h ; space
+            DB 00h,18h,18h,00h,00h,18h,18h,00h ; :
+            DB 00h,00h,00h,7Eh,00h,00h,00h,00h ; -
+
+; ------------------------------------------------------------
