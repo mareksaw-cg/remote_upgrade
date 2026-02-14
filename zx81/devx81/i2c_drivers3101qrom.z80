@@ -1,0 +1,439 @@
+; ZX81 I2C 7-bit scanner and device reader (bit-banged)
+; Port 127, open-drain via transistors (INVERTED):
+;   OUT bit = 1  -> transistor ON  -> line LOW
+;   OUT bit = 0  -> transistor OFF -> line released HIGH (pull-up)
+; 
+; SDA = bit 4 (mask 16)
+; SCL = bit 5 (mask 32)
+; 
+; Found 7-bit addresses are stored at 8196,8197,... (0x2004+)
+; Returns: BC = number of devices found (B=0, C=count)
+            
+LOAD_SAVE	EQU		508			; LOAD/SAVE ROM ROUTINE
+SLOW_FAST	EQU		519
+KEYBOARD    EQU		699			; ROM KEYBOARD SCAN ROUTINE 0x02BB
+SET_FAST	EQU		743			; SET-FAST ROM ROUTINE
+INBYTE  	EQU     844         ; ROM IN-BYTE, returns byte in C
+CLS			EQU		2602		; ROM CLS ROUTINE
+FAST		EQU		3875		; FAST ROM ROUTINE
+SLOW		EQU		3883		; SLOW ROM ROUTINE
+            
+LISTPTR     EQU     8196 		; I2C SCAN SCRATCH
+I2CPTR		EQU		8204		; SCRATCH FOR I2C DATA
+PCFPTR		EQU		8216		; SCRATCH FOR PCF8574
+I2CADDR		EQU		I2CPTR
+I2CCOUNT	EQU		I2CPTR+1
+I2CVALS		EQU		I2CPTR+2
+
+OUTREG		EQU		8194
+OUTPORT		EQU		127
+
+PCF8574_7   EQU 	32
+PCF8574_W   EQU 	PCF8574_7*2   
+PCF8574_R   EQU 	PCF8574_7*2+1 
+
+SDA_M       EQU     16 
+SCL_M       EQU     32 
+
+START7      EQU     8 ; first address to probe (0x08)
+END7P1      EQU     127 ; 
+
+;            ORG     16514
+            ORG		15000
+            
+            LD		HL, 16514
+            LD		DE, 15000
+            LD		BC, 512
+            LDIR
+            RET
+            
+; CALL TABLE
+
+            CALL	SPEED_CHK2			;
+            RET
+            CALL	MOTOR_START			;
+            RET
+            CALL	MOTOR_STOP			;
+            RET
+            CALL	MOTOR_VSTEP			;
+            RET
+            CALL	VLINE				;
+            RET
+            CALL	IMP_COUNT				;
+            RET
+            
+; ------------------------------------------------------------
+; I2C START: SDA goes low while SCL high, then pull SCL low
+; (remember: driving low means setting the bit to 1)
+; ------------------------------------------------------------
+
+I2C_START:           
+; ensure both released high
+            LD 		A, (OUTREG)
+            RES		4, A
+            RES		5, A
+            LD		(OUTREG), A
+            OUT     (OUTPORT),A 
+; SDA low while SCL high
+            SET		4,A 
+            OUT     (OUTPORT),A 
+; SCL low
+            SET		5,A
+            OUT     (OUTPORT),A  
+            RET      
+
+; ------------------------------------------------------------
+; I2C STOP: SDA goes high while SCL high
+; start state assumed: SCL low, SDA low (both driven low)
+
+I2C_STOP:            
+; ensure SDA low, SCL low
+            SET		4,A
+            SET		5,A
+            OUT     (OUTPORT),A 
+; release SCL high
+            RES		5,A 
+            OUT     (OUTPORT),A 
+; release SDA high while SCL high
+            RES		4,A 
+            OUT     (OUTPORT),A  
+            RET      
+
+; ------------------------------------------------------------
+; Write 1 bit from carry (C=1 => send "1" => release SDA high)
+; Clock is a pulse on SCL: high (released) then low (driven)
+; ------------------------------------------------------------
+; Write byte in D, MSB first, then read ACK.
+; E as bit counter then used to backup A content
+; A must not be changed during entire I2C comm as it holds value for OUT!
+; Returns:
+;   Z set if ACK (A=0), NZ if NACK (A!=0)
+
+I2C_WBYTE_ACK:  
+            LD      E,8 			; LICZNIK WYSYLANYCH BITOW
+WB_LOOP:     
+            RES		4, A
+            RL      D 				; bit into carry (MSB first if D loaded as such)
+            JR      C, WBIT_DO               
+            SET		4,A 			; drive SDA low
+WBIT_DO:    
+            OUT     (OUTPORT),A 
+            
+; SCL high (release)
+            RES		5,A 
+            OUT     (OUTPORT),A 
+
+; SCL low (drive)
+            SET		5,A
+            OUT     (OUTPORT),A   
+            DEC		E
+            JR		NZ, WB_LOOP
+
+; release SDA for ACK
+            RES		4,A 
+            OUT     (OUTPORT),A 
+
+; SCL high (release) and sample SDA
+            RES		5,A 
+            OUT     (OUTPORT),A 
+            LD		E,A				; save A state for OUT command
+            IN      A,(OUTPORT) 
+            AND     SDA_M			; A=0 => ACK
+            LD      A,E 			; restore A state for OUT
+; SCL low (drive) to finish ACK clock
+            SET		5,A 
+            OUT     (OUTPORT),A 
+            RET  					; Z flag valid
+            
+; --- read byte, then ACK (master ACK = SDA low during 9th clock) ---
+
+I2C_RBYTE_ACK:
+            CALL I2C_RBYTE_CORE
+; send ACK = SDA low
+            SET		4,A
+            OUT		(OUTPORT),A
+            RES		5,A            ; SCL high (release)
+            OUT		(OUTPORT),A
+            SET		5,A            ; SCL low (drive)
+            OUT		(OUTPORT),A
+            RES		4,A            ; release SDA
+            OUT		(OUTPORT),A
+            RET
+
+; --- read byte, then NACK (master NACK = SDA released during 9th clock) ---
+
+I2C_RBYTE_NACK:
+            CALL I2C_RBYTE_CORE
+; send NACK = SDA released
+            RES		4,A
+            OUT		(OUTPORT),A
+            RES		5,A            ; SCL high
+            OUT		(OUTPORT),A
+            SET		5,A            ; SCL low
+            OUT		(OUTPORT),A
+            RET
+
+; --- core: shift in 8 bits MSB-first into D -----------------
+; ------------------------------------------------------------
+; --- I2C_RBYTE_CORE MODIFIED TO SAVE B REGISTER -------------
+
+I2C_RBYTE_CORE:
+            LD		D,0				; ADRES 9138
+            LD		E,B
+            LD		B,8
+RB1:
+            RES		4,A            	; release SDA so slave can drive it
+            OUT		(OUTPORT),A
+            RES		5,A           	; SCL high (release)
+            OUT		(OUTPORT),A
+            PUSH	AF
+            SLA		D             	; D <<= 1
+            IN		A,(OUTPORT)     ; sample SDA on bit4
+            BIT		4,A
+            JR		Z,RB0
+            INC		D
+RB0:
+            POP		AF            
+            SET		5,A            ; SCL low (drive)
+            OUT		(OUTPORT),A
+            DJNZ	RB1
+            LD		B,E
+            RET
+; ------------------------------------------------------------ 
+
+I2C_SCAN:   
+            CALL    FAST
+            LD      C,START7 		; C = current 7-bit address
+            LD      HL,LISTPTR 		; output list pointer
+            LD      E,0 			; count found
+
+ADDR_LOOP:           
+            LD      A,C 
+            ADD     A,A 			; A = addr<<1
+            LD      D,A 			; D = address byte (write=0)
+            CALL    I2C_START
+            CALL    I2C_WBYTE_ACK 	; Z=ACK
+            JR      NZ,NOACK 
+            LD      (HL),C 
+            INC     HL 
+            INC     E 
+NOACK:               
+            CALL    I2C_STOP 
+            INC     C 
+            LD      A,C 
+            CP      END7P1 
+            JR      NZ,ADDR_LOOP 
+            LD      B,0 
+            LD      C,E 
+            CALL    SLOW
+            RET 
+            
+; ------------------------------------------------------------
+; ROUTINE TO CHECK THE MAX FREQ OF SQUARE WAVE USING PCF8574
+; ------------------------------------------------------------
+
+SPEED_CHK2:
+            CALL	FAST
+            CALL 	I2C_START
+            LD		D, PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,PCF_END
+            LD		D, 255
+            CALL    I2C_WBYTE_ACK            
+FULL_LOOP:  LD		H, 255
+RUN_LOOP:	RES		0, D            
+            CALL    I2C_WBYTE_ACK
+            SET		0, D
+            CALL    I2C_WBYTE_ACK
+            DEC		H
+            JR		NZ, RUN_LOOP
+            LD		E, A
+            PUSH	DE
+            CALL    KEYBOARD
+            LD      A,L
+            CP      0FFh
+            POP		DE
+            LD		A, E
+            JR      Z, FULL_LOOP
+PCF_END		CALL    I2C_STOP
+            CALL	SLOW
+            RET
+
+; ------------------------------------------------------------
+; FOWLER PRINTER TEST ROUTINES
+; ------------------------------------------------------------
+; MOTOR START (BIT0 OF PCF8574)
+; ------------------------------------------------------------
+
+MOTOR_START:
+            CALL	FAST
+            CALL 	I2C_START
+            LD		D, PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,MOT1_END
+            LD		D, 255
+            RES		0, D
+            CALL    I2C_WBYTE_ACK            
+MOT1_END	CALL    I2C_STOP
+            CALL	SLOW
+            RET
+
+; ------------------------------------------------------------
+; MOTOR STOP (BIT0 OF PCF8574)
+; ------------------------------------------------------------
+
+MOTOR_STOP:
+            CALL	FAST
+            CALL 	I2C_START
+            LD		D, PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,MOT2_END
+            LD		D, 255
+            CALL    I2C_WBYTE_ACK            
+MOT2_END	CALL    I2C_STOP
+            CALL	SLOW
+            RET
+
+; ------------------------------------------------------------
+; VARIABLE DELAY LOOP
+; (8216) 1 BYTE VALUE TO SET LOOP LENGTH
+; ------------------------------------------------------------
+
+VARIAB_DELAY:
+            LD		HL, PCFPTR
+            LD		B, (HL)
+VARDLOOP    LD		C, 255
+VARDLOOP1   DEC		C
+            JR		NZ, VARDLOOP1
+            DJNZ	VARDLOOP
+            RET
+
+; ------------------------------------------------------------
+; MOTOR STEP USING VARIABLE DELAY LOOP
+; ------------------------------------------------------------
+
+MOTOR_VSTEP:
+            CALL	FAST
+            CALL 	I2C_START
+            LD		D, PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,MOT3_END
+            LD		D, 255
+            RES		0, D
+            CALL    I2C_WBYTE_ACK
+            CALL	VARIAB_DELAY
+            SET		0, D
+            CALL    I2C_WBYTE_ACK
+MOT3_END	CALL    I2C_STOP
+            CALL	SLOW
+            RET 
+
+; ------------------------------------------------------------
+; PRINTS VERTICAL LINE USING PCF8574
+; ------------------------------------------------------------
+
+VLINE:
+            CALL	FAST
+            CALL 	I2C_START
+            LD		D, PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ,MOT5_END
+            LD		D, 1
+            CALL    I2C_WBYTE_ACK
+            LD		C, 255
+VL1			DEC		C
+            JR		NZ, VL1
+            LD		D, 255
+            CALL    I2C_WBYTE_ACK
+MOT5_END	CALL    I2C_STOP
+            CALL	SLOW
+            RET 
+
+; ------------------------------------------------------------
+; CRLF
+; ------------------------------------------------------------
+
+;CRLF:
+;            CALL	FAST
+;            CALL 	I2C_START
+;            LD		D, PCF8574_W
+;            CALL    I2C_WBYTE_ACK
+;            JR      NZ,MOT6_END
+;            LD		D, 255
+;            RES		0, D
+;            CALL    I2C_WBYTE_ACK 
+;            LD		E, A
+;LINEND      IN		A, (OUTPORT)     
+;            BIT		3, A
+;            JR		NZ, LINEND
+;            NOP
+;LINEND1     IN		A, (OUTPORT)     
+;            BIT		3, A
+;            JR		Z, LINEND1            
+;            LD		A, E
+;            LD		D, 255
+;            CALL    I2C_WBYTE_ACK
+;MOT6_END	CALL    I2C_STOP
+;            CALL	SLOW
+;            RET
+
+; ------------------------------------------------------------
+
+; ------------------------------------------------------------
+; COUNT IMPULSES DURING ENTIRE LINE MOVEMENT OF HEAD
+; ------------------------------------------------------------
+MS1_DELAY:
+            LD		B, 250
+DL1MS		DJNZ	DL1MS
+            RET
+
+IMP_COUNT:
+            CALL	FAST
+            CALL 	I2C_START
+            LD		D, PCF8574_W
+            CALL    I2C_WBYTE_ACK
+            JR      NZ, MOT7_END
+            LD		D, 255
+            RES		0, D					; START MOTOR
+            CALL    I2C_WBYTE_ACK
+            LD		E, A					; SAVE A REGISTER
+CLINEND     IN		A, (OUTPORT)		  	; WAIT FOR ENDSWITCH SIGNAL
+            BIT		3, A
+            JR		NZ, CLINEND
+            NOP
+CLINEND1    IN		A, (OUTPORT)
+            BIT		3, A
+            JR		Z, CLINEND1            	; ENDSWITCH RELEASED, NEW LINE STARTED
+                                            ; NOW WAIT FOR IMPULSES FROM MOVING HEAD, BIT2 OF PORT 127
+                                            ; WE TRY TO COUNT RISING EDGES
+            LD		BC, 0					; WE WILL USE BC AS COUNTER                                
+EDGEDET     IN		A, (OUTPORT)  			; CHECK SPEED SENSOR STATUS, WAITING FOR 0   
+            BIT		2, A
+            JR		NZ, EDGEDET
+WAITFOR1	IN		A, (OUTPORT)  			; NOW WAIT FOR RISING EDGE   
+            BIT		2, A
+            JR		Z, WAITFOR1
+            
+            INC		C						; EDGE DETECTED, INC C
+            LD		A, C
+            CP		30
+            JR		Z, MTRSTP
+            
+            IN		A, (OUTPORT)			; NOW CHECK IF THE CARRAIGE IS BACK ON THE LINE START
+            BIT		3, A
+            JR		NZ, EDGEDET				; IF NOT WE GO BACK TO COUNTING IMPULSES
+            NOP
+LINEND2     IN		A, (OUTPORT)			; IF ENDSWITCH GIVES 0 IT MEANS IT IS DISCONNECTED, SO WAIT FOR 1 AGAIN
+            BIT		3, A
+            JR		Z, LINEND2
+            CALL	DL1MS
+MTRSTP      LD		A, E					; CARRIAGE IS ON LINE START AGAIN, SO STOP MOTOR AND RETURN COUNTER IN BC
+            LD		D, 255
+            CALL    I2C_WBYTE_ACK
+            PUSH	BC
+MOT7_END	CALL    I2C_STOP
+            CALL	SLOW
+            POP 	BC
+            RET            
+
+; ------------------------------------------------------------ 
