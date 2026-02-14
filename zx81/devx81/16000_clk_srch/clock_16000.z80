@@ -1,0 +1,122 @@
+        org	16000
+
+start:	ld	ix,relog
+        ld	(iy+$34),$ff
+        ret
+
+hor:	defb	11		;
+min:	defb	11		;
+seg:	defb	11		;
+
+relog:	ld		a,r		;normal screen
+        ld		bc,$1901
+        ld		a,$f5
+        call	$02b5		;processa o arquivo de tela (Dfile)
+        call	$0292		;retorna para a aplicação
+        call	$0220		;VSYNC
+
+        in		a,($fe)		;determina se é 50 ou 60hz
+        rl		a		;bit 6 = 0 => 60hz 
+        rl		a		;bit 6 = 1 => 50hz
+        sbc		a,a
+        and		$0a
+        add		a,$c3
+        ld		c,a
+        ld		a,($4034)	;FRAMES
+        cp		c
+        jr		nz,prtrl
+        ld		(iy+$34),$ff
+        ld		a,(seg)
+        inc		a
+        cp		$3c		;60 segundos?
+        ld		(seg),a
+        jr		c,prtrl
+        xor		a
+        ld		(seg),a
+        ld		a,(min)
+        inc		a
+        cp		$3c		;60 minutos?
+        ld		(min),a
+        jr		c,prtrl
+        xor		a
+        ld		(min),a
+        ld		a,(hor)
+        inc		a
+        cp		$18		;24 horas?
+        ld		(hor),a
+        jr		c,prtrl
+        xor		a
+        ld		(hor),a
+
+prtrl:	ld		hl,($400c)	;imprime o relógio
+        ld		de,$0018
+        add		hl,de
+        ld		a,(hor)
+        call	prtnr
+        ld		(hl),142		; : inverted
+        ld		a,(min)
+        call	prtnr
+        ld		(hl),128		; : inverted
+        ld		a,(seg)
+        call	prtnr
+        ld		ix,relog	;salva o vetor da interrupção em ix
+        jp		$02a4		;retorna para a aplicação
+
+prtnr:	ld		e,a		;imprime dois dígitos
+        inc		hl
+        ex		de,hl
+        ld		bc,10
+        call	prtdig
+        ld		bc,1
+        call	prtdig
+        ex		de,hl
+        ret
+
+prtdig:	sub		a
+        ld		a,156
+jp1:	sbc		hl,bc
+        jr		c,jp2
+        inc		a
+        jr		jp1
+jp2:	add		hl,bc
+        ld		(de),a
+        inc		de
+        ret
+        
+get_from_rtc:
+        call	9214
+        ld		bc,8204
+        ld		hl,hor
+        ld		a,(bc)
+        ld		(hl),a
+        inc		hl
+        inc		bc
+        ld		a,(bc)
+        ld		(hl),a
+        inc		hl
+        inc		bc  
+        ld		a,(bc)
+        ld		(hl),a
+        jp		start
+;
+; now subroutine to search for byte in a memory area
+;
+bsearch:
+        ld		hl,16520
+        ld		bc,2048
+        ld		a,234
+        cpir
+        jr		nz,ends
+        ld		b,h
+        ld		c,l
+ends    dec		bc
+        ret
+;
+; subroutine to copy code do 16000
+;
+ccopy:
+        ld		hl,16514
+        ld		de,16000
+        ld		bc,200
+        ldir
+        ret
