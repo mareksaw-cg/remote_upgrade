@@ -1,4 +1,4 @@
-#--version1.011.5_231125--
+#--version1.012.5_060426--
 # UWAGA!!! Blok wejsc 0-3 prawdopodobnie uszkodzony!
 # UWAGA!!! Nie wierzyc AI w sprawach usuwania zaklocen itp.!
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
@@ -402,7 +402,7 @@ def tick(timer):
     
     debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable, curcount)
     
-    if volt2 < 12.6 and amp2 > 600 and modpin:
+    if volt2 < 12.8 and amp2 > 400 and modpin:
         data = safe_get("http://10.0.0.56:1412/msolaroff", timeout=3)
         sleep(0.3)
         schedule(get_pins, 0)
@@ -441,10 +441,10 @@ def tick(timer):
             tvmins += 1
             if not frdisable:
                 frdisable = True
-                safe_get("http://10.0.0.8:8099/frstop", timeout=1)
+                #safe_get("http://10.0.0.8:8099/frstop", timeout=1)
         elif frdisable:
             frdisable = False
-            safe_get("http://10.0.0.8:8099/frstart", timeout=1)
+            #safe_get("http://10.0.0.8:8099/frstart", timeout=1)
             
         if not mm % 10:
             schedule(scollect, 0)
