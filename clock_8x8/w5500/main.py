@@ -402,7 +402,7 @@ def tick(timer):
     
     debug_print(lcdcount, lcdon, hh, mm, ss, volt, amp, volt2, amp2, pows/1000, powa/1000, enday, outday, pcf0, pws, sau, frdisable, curcount)
     
-    if volt2 < 12.8 and amp2 > 400 and modpin:
+    if volt2 < 12.9 and modpin:
         data = safe_get("http://10.0.0.56:1412/msolaroff", timeout=3)
         sleep(0.3)
         schedule(get_pins, 0)
