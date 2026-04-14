@@ -531,9 +531,10 @@ def tick(timer):
         if lcdcount > 90 and not lcdon:
             display.poweroff()
     if pir.value() and not lcdon:
-        display.poweron()
-        lcdon = True
-        lcdcount = 0
+        if hour < 21 or hour > 7:
+            display.poweron()
+            lcdon = True
+            lcdcount = 0
     if pir.value() and lcdon:
         lcdcount = 0
     
