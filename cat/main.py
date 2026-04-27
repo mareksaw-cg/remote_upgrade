@@ -1,4 +1,4 @@
-#--version0.980_140426--    
+#--version0.981_270426--    
 DEBUG = False
 
 from machine import Pin
@@ -531,7 +531,7 @@ def tick(timer):
         if lcdcount > 90 and not lcdon:
             display.poweroff()
     if pir.value() and not lcdon:
-        if hour < 21 or hour > 7:
+        if hour < 21 and hour > 7:
             display.poweron()
             lcdon = True
             lcdcount = 0
