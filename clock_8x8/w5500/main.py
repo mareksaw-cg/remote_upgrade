@@ -857,7 +857,7 @@ async def index(request, response):
 @app.route('/tempds')
 async def index(request, response):
     await response.start_html()
-    data = safe_get("http://10.0.0.8:8099/tempds", timeout=2)[:-1].decode()
+    data = safe_get("http://10.0.0.8:8099/tempds", timeout=2).decode()
     if data: await response.send(_STRINGS[1] % data)
     
 @app.route('/snowdata')
