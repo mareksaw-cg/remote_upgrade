@@ -1,4 +1,4 @@
-#--version1.014.5_100826--
+#--version1.015.5_040926--
 # UWAGA!!! Blok wejsc 0-3 prawdopodobnie uszkodzony!
 # UWAGA!!! Nie wierzyc AI w sprawach usuwania zaklocen itp.!
 # UWAGA!!! Przy bledach wskazania napiecia INA219 sprawdz poprawnosc polaczenia masy zasilania!!!
